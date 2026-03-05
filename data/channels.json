@@ -1,0 +1,7 @@
+[
+  { "id": "ch-1", "name": "General Trade" },
+  { "id": "ch-2", "name": "Modern Trade" },
+  { "id": "ch-3", "name": "Pharmacy" },
+  { "id": "ch-4", "name": "Wholesale" },
+  { "id": "ch-5", "name": "E-Commerce" }
+]
