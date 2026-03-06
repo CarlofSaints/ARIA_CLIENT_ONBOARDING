@@ -27,6 +27,7 @@ export default function NewOnboardingPage() {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [createdClientId, setCreatedClientId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,6 +101,8 @@ export default function NewOnboardingPage() {
         setSubmitError(d.error ?? "Submission failed");
         return;
       }
+      const data = await res.json();
+      setCreatedClientId(data.id ?? null);
       setSuccess(true);
     } catch {
       setSubmitError("Network error. Please try again.");
@@ -112,20 +115,31 @@ export default function NewOnboardingPage() {
 
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto px-6 py-20 text-center">
-        <div className="w-16 h-16 rounded-full bg-oj-blue-light flex items-center justify-center mx-auto mb-5 text-3xl">
+      <div className="max-w-2xl mx-auto px-6 py-16 text-center">
+        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5 text-3xl">
           ✅
         </div>
         <h2 className="text-2xl font-bold text-oj-blue mb-2">Client Created</h2>
-        <p className="text-oj-muted mb-8">
-          The client record has been saved and a welcome email has been sent to the recipients.
+        <p className="text-oj-muted mb-3">
+          The client record has been saved and a welcome email has been sent.
         </p>
-        <div className="flex gap-3 justify-center">
+        <p className="text-sm text-oj-muted mb-8">
+          Next step: set up the SharePoint folder and Teams structure for this client.
+        </p>
+        <div className="flex gap-3 justify-center flex-wrap">
+          {createdClientId && (
+            <Link
+              href={`/clients/${createdClientId}`}
+              className="bg-oj-blue text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-oj-blue-hover transition-colors"
+            >
+              Set Up SharePoint &amp; Teams →
+            </Link>
+          )}
           <button
-            onClick={() => { setSuccess(false); setForm(emptyForm); }}
-            className="bg-oj-blue text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-oj-blue-hover transition-colors"
+            onClick={() => { setSuccess(false); setForm(emptyForm); setCreatedClientId(null); }}
+            className="border border-oj-border px-6 py-2.5 rounded-lg text-sm text-oj-dark hover:bg-oj-bg transition-colors"
           >
-            Create Another
+            Create Another Client
           </button>
           <Link
             href="/"

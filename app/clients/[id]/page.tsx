@@ -36,6 +36,9 @@ type Client = {
   status: string;
   checklist: Record<string, ChecklistItemState>;
   createdAt: string;
+  sharepointStatus?: "created" | "error";
+  teamsStatus?: "creating" | "created" | "error";
+  teamsId?: string;
 };
 
 type CAM = { id: string; name: string; surname: string; email: string };
@@ -90,24 +93,77 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [checklist, setChecklist] = useState<Record<string, ChecklistItemState>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [spLoading, setSpLoading] = useState(false);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [infraError, setInfraError] = useState("");
 
-  useEffect(() => {
-    if (!ready) return;
-    Promise.all([
+  const loadClient = async () => {
+    const [clientsData, defsData, camsData, channelsData] = await Promise.all([
       fetch(`/api/clients`).then((r) => r.json()),
       fetch("/api/checklist").then((r) => r.json()),
       fetch("/api/cams").then((r) => r.json()),
       fetch("/api/channels").then((r) => r.json()),
-    ]).then(([clientsData, defsData, camsData, channelsData]) => {
-      const found = (clientsData as Client[]).find((c) => c.id === id);
-      setClient(found ?? null);
-      setDefs((defsData as ChecklistItemDef[]).sort((a, b) => a.order - b.order));
-      setCams(camsData);
-      setChannels(channelsData);
-      setChecklist(found?.checklist ?? {});
-      setLoading(false);
-    });
+    ]);
+    const found = (clientsData as Client[]).find((c) => c.id === id);
+    setClient(found ?? null);
+    setDefs((defsData as ChecklistItemDef[]).sort((a, b) => a.order - b.order));
+    setCams(camsData);
+    setChannels(channelsData);
+    setChecklist(found?.checklist ?? {});
+    return found ?? null;
+  };
+
+  useEffect(() => {
+    if (!ready) return;
+    loadClient().then(() => setLoading(false));
   }, [ready, id]);
+
+  // Poll while Teams is creating
+  useEffect(() => {
+    if (!client || client.teamsStatus !== "creating") return;
+    const interval = setInterval(async () => {
+      const clientsData: Client[] = await fetch("/api/clients").then((r) => r.json());
+      const found = clientsData.find((c) => c.id === id);
+      if (found) {
+        setClient(found);
+        setChecklist(found.checklist ?? {});
+        if (found.teamsStatus !== "creating") clearInterval(interval);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [client?.teamsStatus, id]);
+
+  const handleCreateSharePoint = async () => {
+    if (client?.sharepointStatus === "created") return;
+    setInfraError("");
+    setSpLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/sharepoint`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setInfraError(data.error ?? "SharePoint creation failed"); return; }
+      await loadClient();
+    } catch {
+      setInfraError("Network error during SharePoint creation");
+    } finally {
+      setSpLoading(false);
+    }
+  };
+
+  const handleCreateTeams = async () => {
+    if (client?.teamsStatus === "created" || client?.teamsStatus === "creating") return;
+    setInfraError("");
+    setTeamsLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/teams`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setInfraError(data.error ?? "Teams creation failed"); return; }
+      setClient((c) => c ? { ...c, teamsStatus: "creating" } : c);
+    } catch {
+      setInfraError("Network error during Teams creation");
+    } finally {
+      setTeamsLoading(false);
+    }
+  };
 
   const toggleItem = async (itemId: string, newCompleted: boolean) => {
     setSaving(itemId);
@@ -220,6 +276,58 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <p className="text-xs text-oj-muted mt-2">Start date: {client.startDate}</p>
         </div>
+      </div>
+
+      {/* Infrastructure Setup */}
+      <div className="bg-oj-white border border-oj-border rounded-xl p-5 shadow-sm mb-6">
+        <h2 className="text-sm font-bold text-oj-dark mb-3">Infrastructure Setup</h2>
+        <div className="flex flex-wrap gap-3">
+          {/* SharePoint */}
+          {client.sharepointStatus === "created" ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+              <span>✓</span> SharePoint folder created
+            </div>
+          ) : (
+            <button
+              onClick={handleCreateSharePoint}
+              disabled={spLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {spLoading ? (
+                <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span> Creating folder…</>
+              ) : (
+                <>{client.sharepointStatus === "error" ? "⚠ Retry SharePoint" : "📁 Create SharePoint Folder"}</>
+              )}
+            </button>
+          )}
+
+          {/* Teams */}
+          {client.teamsStatus === "created" ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+              <span>✓</span> Teams structure created
+            </div>
+          ) : client.teamsStatus === "creating" ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
+              <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full"></span>
+              Creating Teams structure… (this takes ~30–60s)
+            </div>
+          ) : (
+            <button
+              onClick={handleCreateTeams}
+              disabled={teamsLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {teamsLoading ? (
+                <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span> Starting…</>
+              ) : (
+                <>{client.teamsStatus === "error" ? "⚠ Retry Teams" : "👥 Create Teams Structure"}</>
+              )}
+            </button>
+          )}
+        </div>
+        {infraError && (
+          <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{infraError}</p>
+        )}
       </div>
 
       {/* Onboarding progress */}

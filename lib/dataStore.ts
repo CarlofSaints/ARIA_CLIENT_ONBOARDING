@@ -111,6 +111,9 @@ export type Client = {
   status: "intake" | "active" | "live";
   checklist: Record<string, ChecklistItemState>;
   createdAt: string;
+  sharepointStatus?: "created" | "error";
+  teamsStatus?: "creating" | "created" | "error";
+  teamsId?: string;
 };
 
 // --- CAMs ---
