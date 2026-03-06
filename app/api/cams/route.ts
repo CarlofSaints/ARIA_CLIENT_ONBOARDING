@@ -3,19 +3,24 @@ import { getCams, saveCams, CAM } from "@/lib/dataStore";
 import { randomUUID } from "crypto";
 
 export async function GET() {
-  const cams = getCams();
-  return NextResponse.json(cams);
+  return NextResponse.json(await getCams());
 }
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, email } = body as { name: string; email: string };
-  if (!name || !email) {
-    return NextResponse.json({ error: "name and email required" }, { status: 400 });
+  const { name, surname, email, cell } = body as { name: string; surname: string; email: string; cell?: string };
+  if (!name || !surname || !email) {
+    return NextResponse.json({ error: "name, surname and email required" }, { status: 400 });
   }
-  const cams = getCams();
-  const newCam: CAM = { id: `cam-${randomUUID()}`, name: name.trim(), email: email.trim() };
+  const cams = await getCams();
+  const newCam: CAM = {
+    id: `cam-${randomUUID()}`,
+    name: name.trim(),
+    surname: surname.trim(),
+    email: email.trim(),
+    cell: (cell ?? "").trim(),
+  };
   cams.push(newCam);
-  saveCams(cams);
+  await saveCams(cams);
   return NextResponse.json(newCam, { status: 201 });
 }

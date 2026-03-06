@@ -1,0 +1,222 @@
+[
+  {
+    "id": "cl-welcome-email",
+    "label": "Welcome email sent to client",
+    "description": "Automatically sent when the client record is created",
+    "section": "onboarding",
+    "type": "auto",
+    "dynamic": false,
+    "order": 1,
+    "active": true
+  },
+  {
+    "id": "cl-cognito-form",
+    "label": "Client Info Cognito form completed by client",
+    "description": "Auto-detected via Cognito API when the form is submitted",
+    "section": "onboarding",
+    "type": "auto",
+    "dynamic": false,
+    "order": 2,
+    "active": true
+  },
+  {
+    "id": "cl-personnel-info",
+    "label": "Personnel information returned by client",
+    "description": "Auto-detected when client submits the personnel collection form",
+    "section": "onboarding",
+    "type": "auto",
+    "dynamic": false,
+    "order": 3,
+    "active": true
+  },
+  {
+    "id": "cl-whatsapp-group",
+    "label": "Client WhatsApp group created",
+    "description": "CAM creates and adds all relevant parties to the group",
+    "section": "onboarding",
+    "type": "either",
+    "dynamic": false,
+    "order": 4,
+    "active": true
+  },
+  {
+    "id": "cl-nda-sent",
+    "label": "NDA sent to client",
+    "description": "Automatically sent from the app via QuicklySign",
+    "section": "legal",
+    "type": "auto",
+    "dynamic": false,
+    "order": 5,
+    "active": true
+  },
+  {
+    "id": "cl-nda-signed",
+    "label": "NDA signed by client",
+    "description": "Auto-detected via QuicklySign API when client signs",
+    "section": "legal",
+    "type": "auto",
+    "dynamic": false,
+    "order": 6,
+    "active": true
+  },
+  {
+    "id": "cl-sla-sent",
+    "label": "SLA sent to client",
+    "description": "Automatically sent from the app via QuicklySign",
+    "section": "legal",
+    "type": "auto",
+    "dynamic": false,
+    "order": 7,
+    "active": true
+  },
+  {
+    "id": "cl-sla-signed",
+    "label": "SLA signed by client",
+    "description": "Auto-detected via QuicklySign API when client signs",
+    "section": "legal",
+    "type": "auto",
+    "dynamic": false,
+    "order": 8,
+    "active": true
+  },
+  {
+    "id": "cl-channel-emails",
+    "label": "Channel emails sent",
+    "description": "One per assigned channel — automatically sent by the app",
+    "section": "channels",
+    "type": "auto",
+    "dynamic": true,
+    "order": 9,
+    "active": true
+  },
+  {
+    "id": "cl-channel-mandates",
+    "label": "Channel mandates received",
+    "description": "One per assigned channel — CAM confirms receipt manually",
+    "section": "channels",
+    "type": "manual",
+    "dynamic": true,
+    "order": 10,
+    "active": true
+  },
+  {
+    "id": "cl-sharepoint",
+    "label": "SharePoint folder structure created",
+    "description": "Auto-detected when CAM clicks Create SharePoint Folders in the app",
+    "section": "technical",
+    "type": "auto",
+    "dynamic": false,
+    "order": 11,
+    "active": true
+  },
+  {
+    "id": "cl-ctrl-links",
+    "label": "Control file: Links File",
+    "description": "CAM confirms the Links File has been created",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 12,
+    "active": true
+  },
+  {
+    "id": "cl-ctrl-product",
+    "label": "Control file: Product Management File",
+    "description": "CAM confirms the Product Management File has been created",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 13,
+    "active": true
+  },
+  {
+    "id": "cl-ctrl-ranging",
+    "label": "Control file: Ranging File",
+    "description": "CAM confirms the Ranging File has been created",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 14,
+    "active": true
+  },
+  {
+    "id": "cl-ctrl-promo",
+    "label": "Control file: Promo File",
+    "description": "CAM confirms the Promo File has been created",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 15,
+    "active": true
+  },
+  {
+    "id": "cl-ctrl-tags",
+    "label": "Control file: Custom Store Tags",
+    "description": "CAM confirms the Custom Store Tags file has been created",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 16,
+    "active": true
+  },
+  {
+    "id": "cl-aria-lite-addin",
+    "label": "ARIA Lite: Add-in set up (if applicable)",
+    "description": "For ARIA Lite clients only — CAM confirms add-in is configured",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 17,
+    "active": true
+  },
+  {
+    "id": "cl-aria-lite-shared",
+    "label": "ARIA Lite: Add-in shared with client (if applicable)",
+    "description": "For ARIA Lite clients only — CAM confirms add-in has been shared",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 18,
+    "active": true
+  },
+  {
+    "id": "cl-pbi-accounts",
+    "label": "OJ Power BI accounts created (if required)",
+    "description": "If client requires PBI reporting — CAM confirms accounts are set up",
+    "section": "technical",
+    "type": "manual",
+    "dynamic": false,
+    "order": 19,
+    "active": true
+  },
+  {
+    "id": "cl-training",
+    "label": "Training completed with client",
+    "description": "CAM confirms onboarding training session has taken place",
+    "section": "training",
+    "type": "manual",
+    "dynamic": false,
+    "order": 20,
+    "active": true
+  },
+  {
+    "id": "cl-report-workshop",
+    "label": "Report workshop completed with client",
+    "description": "CAM confirms the reporting workshop session has taken place",
+    "section": "training",
+    "type": "manual",
+    "dynamic": false,
+    "order": 21,
+    "active": true
+  },
+  {
+    "id": "cl-monthly-meetings",
+    "label": "Monthly meetings scheduled",
+    "description": "CAM confirms recurring monthly meetings have been set up",
+    "section": "training",
+    "type": "manual",
+    "dynamic": false,
+    "order": 22,
+    "active": true
+  }
+]

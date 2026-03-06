@@ -1,0 +1,127 @@
+[
+  {
+    "id": "role-site-admin",
+    "name": "Site Admin",
+    "description": "Full access to all system functions",
+    "builtIn": true,
+    "permissionIds": [
+      "add-channel",
+      "edit-channel",
+      "delete-channel",
+      "add-client",
+      "edit-client",
+      "delete-client",
+      "add-cam",
+      "edit-cam",
+      "delete-cam",
+      "assign-client-cam",
+      "admin-accounting",
+      "sharepoint-setup",
+      "cam-operations",
+      "checklist-add",
+      "checklist-remove",
+      "checklist-edit",
+      "assign-channels-clients",
+      "remove-channels-clients",
+      "manage-users"
+    ]
+  },
+  {
+    "id": "role-developer",
+    "name": "Developer",
+    "description": "Full system access for development and maintenance",
+    "builtIn": true,
+    "permissionIds": [
+      "add-channel",
+      "edit-channel",
+      "delete-channel",
+      "add-client",
+      "edit-client",
+      "delete-client",
+      "add-cam",
+      "edit-cam",
+      "delete-cam",
+      "assign-client-cam",
+      "admin-accounting",
+      "sharepoint-setup",
+      "cam-operations",
+      "checklist-add",
+      "checklist-remove",
+      "checklist-edit",
+      "assign-channels-clients",
+      "remove-channels-clients",
+      "manage-users"
+    ]
+  },
+  {
+    "id": "role-ops-admin",
+    "name": "Ops Admin",
+    "description": "Operations administrator with broad access",
+    "builtIn": false,
+    "permissionIds": [
+      "add-channel",
+      "add-cam",
+      "edit-cam",
+      "assign-client-cam",
+      "admin-accounting",
+      "sharepoint-setup",
+      "cam-operations",
+      "checklist-add",
+      "checklist-remove",
+      "checklist-edit",
+      "assign-channels-clients",
+      "remove-channels-clients",
+      "edit-channel"
+    ]
+  },
+  {
+    "id": "role-team-manager",
+    "name": "Team Manager",
+    "description": "Manages a team of CAMs and their clients",
+    "builtIn": false,
+    "permissionIds": [
+      "add-client",
+      "edit-client",
+      "add-cam",
+      "edit-cam",
+      "assign-client-cam",
+      "cam-operations",
+      "checklist-add",
+      "checklist-remove",
+      "checklist-edit",
+      "assign-channels-clients",
+      "remove-channels-clients"
+    ]
+  },
+  {
+    "id": "role-cam",
+    "name": "CAM",
+    "description": "Client Account Manager — manages assigned clients",
+    "builtIn": false,
+    "permissionIds": [
+      "add-client",
+      "assign-client-cam",
+      "cam-operations",
+      "checklist-add",
+      "checklist-edit"
+    ]
+  },
+  {
+    "id": "role-accountant",
+    "name": "Accountant",
+    "description": "Access to financial and billing functions only",
+    "builtIn": false,
+    "permissionIds": [
+      "admin-accounting"
+    ]
+  },
+  {
+    "id": "role-dba",
+    "name": "DBA",
+    "description": "Database administrator with operational access",
+    "builtIn": false,
+    "permissionIds": [
+      "cam-operations"
+    ]
+  }
+]

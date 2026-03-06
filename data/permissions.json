@@ -1,0 +1,21 @@
+[
+  { "id": "add-channel", "name": "Add Channel", "description": "Create new channels" },
+  { "id": "edit-channel", "name": "Edit Channel", "description": "Edit existing channels" },
+  { "id": "delete-channel", "name": "Delete Channel", "description": "Remove channels from the system" },
+  { "id": "add-client", "name": "Add Client", "description": "Create new client onboarding records" },
+  { "id": "edit-client", "name": "Edit Client", "description": "Edit existing client records" },
+  { "id": "delete-client", "name": "Delete Client", "description": "Remove client records" },
+  { "id": "add-cam", "name": "Add CAM", "description": "Add new Client Account Managers" },
+  { "id": "edit-cam", "name": "Edit CAM", "description": "Edit existing CAM records" },
+  { "id": "delete-cam", "name": "Delete CAM", "description": "Remove CAMs from the system" },
+  { "id": "assign-client-cam", "name": "Assign Client to CAM", "description": "Link clients to their account managers" },
+  { "id": "admin-accounting", "name": "Accounting Administration", "description": "Access billing, invoicing, and financial data" },
+  { "id": "sharepoint-setup", "name": "SharePoint Setup", "description": "Configure SharePoint libraries and folder structures" },
+  { "id": "cam-operations", "name": "CAM Operations", "description": "Perform day-to-day CAM operational tasks" },
+  { "id": "checklist-add", "name": "Add Checklist Items", "description": "Add new items to client checklists" },
+  { "id": "checklist-remove", "name": "Remove Checklist Items", "description": "Remove items from client checklists" },
+  { "id": "checklist-edit", "name": "Edit Checklist Items", "description": "Edit existing checklist items" },
+  { "id": "assign-channels-clients", "name": "Assign Channels to Clients", "description": "Link channels to client accounts" },
+  { "id": "remove-channels-clients", "name": "Remove Channels from Clients", "description": "Unlink channels from client accounts" },
+  { "id": "manage-users", "name": "Manage Users", "description": "Create, edit, deactivate, and delete system users" }
+]

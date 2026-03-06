@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getChannels, saveChannels } from "@/lib/dataStore";
+import { getClients, saveClients } from "@/lib/dataStore";
 
 export async function PUT(
   request: Request,
@@ -7,15 +7,14 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { name } = body as { name: string };
-  const channels = await getChannels();
-  const idx = channels.findIndex((c) => c.id === id);
+  const clients = await getClients();
+  const idx = clients.findIndex((c) => c.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  channels[idx] = { ...channels[idx], name: name.trim() };
-  await saveChannels(channels);
-  return NextResponse.json(channels[idx]);
+  clients[idx] = { ...clients[idx], ...body };
+  await saveClients(clients);
+  return NextResponse.json(clients[idx]);
 }
 
 export async function DELETE(
@@ -23,11 +22,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const channels = await getChannels();
-  const filtered = channels.filter((c) => c.id !== id);
-  if (filtered.length === channels.length) {
+  const clients = await getClients();
+  const filtered = clients.filter((c) => c.id !== id);
+  if (filtered.length === clients.length) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  await saveChannels(filtered);
+  await saveClients(filtered);
   return NextResponse.json({ ok: true });
 }

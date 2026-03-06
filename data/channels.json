@@ -1,7 +1,18 @@
 [
-  { "id": "ch-1", "name": "General Trade" },
-  { "id": "ch-2", "name": "Modern Trade" },
-  { "id": "ch-3", "name": "Pharmacy" },
-  { "id": "ch-4", "name": "Wholesale" },
-  { "id": "ch-5", "name": "E-Commerce" }
+  { "id": "ch-makro", "name": "Makro" },
+  { "id": "ch-builders", "name": "Builders Warehouse" },
+  { "id": "ch-game", "name": "Game" },
+  { "id": "ch-pnp", "name": "PnP" },
+  { "id": "ch-clicks", "name": "Clicks" },
+  { "id": "ch-dischem", "name": "Dis-Chem" },
+  { "id": "ch-home", "name": "@HOME" },
+  { "id": "ch-iser", "name": "ISER" },
+  { "id": "ch-shoprite", "name": "Shoprite Checkers" },
+  { "id": "ch-takealot", "name": "TAKEALOT" },
+  { "id": "ch-amazon", "name": "AMAZON" },
+  { "id": "ch-spar", "name": "SPAR" },
+  { "id": "ch-nds", "name": "NDS" },
+  { "id": "ch-shell", "name": "Shell" },
+  { "id": "ch-total", "name": "Total" },
+  { "id": "ch-engen", "name": "Engen" }
 ]

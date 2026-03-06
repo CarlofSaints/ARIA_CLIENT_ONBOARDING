@@ -1,0 +1,24 @@
+[
+  {
+    "id": "user-carl",
+    "name": "Carl",
+    "surname": "dos Santos",
+    "email": "carl@outerjoin.co.za",
+    "cell": "",
+    "roleId": "role-site-admin",
+    "passwordHash": "$2b$10$rVUQ9lFFCZ.CUhpZglMZWePh5tpb5/SSWFx/JljsUilvwUAZwQli2",
+    "active": true,
+    "createdAt": "2026-03-06T00:00:00.000Z"
+  },
+  {
+    "id": "user-5e6e94dd-4200-425d-b0b6-c3a2668e2499",
+    "name": "Mark",
+    "surname": "Blackburn",
+    "email": "carl@iram.co.za",
+    "cell": "0825260357",
+    "roleId": "role-site-admin",
+    "passwordHash": "$2b$10$OKuUdWD7Qp.aTnwgpoldyOP4PuTTvVAnLs5xNmW9D0h4qBE7xMIUm",
+    "active": true,
+    "createdAt": "2026-03-06T09:35:40.699Z"
+  }
+]

@@ -1,3 +1,7 @@
 [
-  { "id": "cam-1", "name": "Carl dos Santos", "email": "carl@outerjoin.co.za" }
+  { "id": "cam-cheri", "name": "Cheri", "surname": "Buys", "email": "cheri@outerjoin.co.za", "cell": "" },
+  { "id": "cam-bradley", "name": "Bradley", "surname": "Viljoen", "email": "bradley@outerjoin.co.za", "cell": "" },
+  { "id": "cam-nicolas", "name": "Nicolas", "surname": "Dolo", "email": "nicolas@outerjoin.co.za", "cell": "" },
+  { "id": "cam-mark", "name": "Mark", "surname": "Blackburn", "email": "mark@outerjoin.co.za", "cell": "" },
+  { "id": "cam-carl", "name": "Carl", "surname": "dos Santos", "email": "carl@outerjoin.co.za", "cell": "" }
 ]
