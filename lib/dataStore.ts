@@ -175,7 +175,21 @@ export async function getCams(): Promise<CAM[]> { return readData<CAM[]>("cams.j
 export async function saveCams(cams: CAM[]): Promise<void> { return writeData("cams.json", cams); }
 
 // --- Channels ---
-export async function getChannels(): Promise<Channel[]> { return readData<Channel[]>("channels.json"); }
+export async function getChannels(): Promise<Channel[]> {
+  const channels = await readData<Channel[]>("channels.json");
+  // KV may have been seeded before logoFileName was added — merge from bundled JSON
+  if (useKV) {
+    const bundled = readJsonSync<Channel[]>("channels.json");
+    const logoMap = new Map(bundled.map((c) => [c.id, c.logoFileName]));
+    let dirty = false;
+    for (const ch of channels) {
+      const logo = logoMap.get(ch.id);
+      if (!ch.logoFileName && logo) { ch.logoFileName = logo; dirty = true; }
+    }
+    if (dirty) await writeData("channels.json", channels);
+  }
+  return channels;
+}
 export async function saveChannels(channels: Channel[]): Promise<void> { return writeData("channels.json", channels); }
 
 // --- Permissions ---
