@@ -21,7 +21,7 @@ const emptyForm = {
 };
 
 export default function NewOnboardingPage() {
-  const { ready } = useAuth();
+  const { ready, session } = useAuth();
   const [cams, setCams] = useState<CAM[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [form, setForm] = useState(emptyForm);
@@ -94,6 +94,8 @@ export default function NewOnboardingPage() {
           startDate: form.startDate,
           channelIds: form.channelIds,
           contactName: form.contactName,
+          userId: session?.id,
+          userName: session ? `${session.name} ${session.surname}` : undefined,
         }),
       });
       if (!res.ok) {

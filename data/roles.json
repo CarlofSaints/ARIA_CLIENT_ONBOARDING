@@ -5,25 +5,13 @@
     "description": "Full access to all system functions",
     "builtIn": true,
     "permissionIds": [
-      "add-channel",
-      "edit-channel",
-      "delete-channel",
-      "add-client",
-      "edit-client",
-      "delete-client",
-      "add-cam",
-      "edit-cam",
-      "delete-cam",
-      "assign-client-cam",
-      "admin-accounting",
-      "sharepoint-setup",
-      "cam-operations",
-      "checklist-add",
-      "checklist-remove",
-      "checklist-edit",
-      "assign-channels-clients",
-      "remove-channels-clients",
-      "manage-users"
+      "add-channel", "edit-channel", "delete-channel",
+      "add-client", "edit-client", "delete-client",
+      "add-cam", "edit-cam", "delete-cam",
+      "assign-client-cam", "admin-accounting", "sharepoint-setup",
+      "cam-operations", "checklist-add", "checklist-remove", "checklist-edit",
+      "assign-channels-clients", "remove-channels-clients",
+      "manage-users", "view-activity-log"
     ]
   },
   {
@@ -32,25 +20,13 @@
     "description": "Full system access for development and maintenance",
     "builtIn": true,
     "permissionIds": [
-      "add-channel",
-      "edit-channel",
-      "delete-channel",
-      "add-client",
-      "edit-client",
-      "delete-client",
-      "add-cam",
-      "edit-cam",
-      "delete-cam",
-      "assign-client-cam",
-      "admin-accounting",
-      "sharepoint-setup",
-      "cam-operations",
-      "checklist-add",
-      "checklist-remove",
-      "checklist-edit",
-      "assign-channels-clients",
-      "remove-channels-clients",
-      "manage-users"
+      "add-channel", "edit-channel", "delete-channel",
+      "add-client", "edit-client", "delete-client",
+      "add-cam", "edit-cam", "delete-cam",
+      "assign-client-cam", "admin-accounting", "sharepoint-setup",
+      "cam-operations", "checklist-add", "checklist-remove", "checklist-edit",
+      "assign-channels-clients", "remove-channels-clients",
+      "manage-users", "view-activity-log"
     ]
   },
   {
@@ -59,19 +35,12 @@
     "description": "Operations administrator with broad access",
     "builtIn": false,
     "permissionIds": [
-      "add-channel",
-      "add-cam",
-      "edit-cam",
-      "assign-client-cam",
-      "admin-accounting",
-      "sharepoint-setup",
-      "cam-operations",
-      "checklist-add",
-      "checklist-remove",
-      "checklist-edit",
-      "assign-channels-clients",
-      "remove-channels-clients",
-      "edit-channel"
+      "add-channel", "edit-channel",
+      "add-cam", "edit-cam",
+      "assign-client-cam", "admin-accounting", "sharepoint-setup",
+      "cam-operations", "checklist-add", "checklist-remove", "checklist-edit",
+      "assign-channels-clients", "remove-channels-clients",
+      "view-activity-log"
     ]
   },
   {
@@ -80,17 +49,12 @@
     "description": "Manages a team of CAMs and their clients",
     "builtIn": false,
     "permissionIds": [
-      "add-client",
-      "edit-client",
-      "add-cam",
-      "edit-cam",
-      "assign-client-cam",
-      "cam-operations",
-      "checklist-add",
-      "checklist-remove",
-      "checklist-edit",
-      "assign-channels-clients",
-      "remove-channels-clients"
+      "add-client", "edit-client",
+      "add-cam", "edit-cam",
+      "assign-client-cam", "cam-operations",
+      "checklist-add", "checklist-remove", "checklist-edit",
+      "assign-channels-clients", "remove-channels-clients",
+      "view-activity-log"
     ]
   },
   {
@@ -99,11 +63,9 @@
     "description": "Client Account Manager — manages assigned clients",
     "builtIn": false,
     "permissionIds": [
-      "add-client",
-      "assign-client-cam",
-      "cam-operations",
-      "checklist-add",
-      "checklist-edit"
+      "add-client", "assign-client-cam",
+      "cam-operations", "checklist-add", "checklist-edit",
+      "view-activity-log"
     ]
   },
   {

@@ -20,5 +20,57 @@
     "passwordHash": "$2b$10$OKuUdWD7Qp.aTnwgpoldyOP4PuTTvVAnLs5xNmW9D0h4qBE7xMIUm",
     "active": true,
     "createdAt": "2026-03-06T09:35:40.699Z"
+  },
+  {
+    "id": "user-87fa89c1-7e44-4aea-9570-b9552f1b2f7a",
+    "name": "Cheri",
+    "surname": "Buys",
+    "email": "cheri@outerjoin.co.za",
+    "cell": "",
+    "roleId": "role-cam",
+    "passwordHash": "$2b$10$qLNzTXQHM2uodS72twqnoe52I5Xt14CIKgjN263gwaHYiCOi1sJ5S",
+    "active": true,
+    "forcePasswordChange": true,
+    "firstLoginAt": null,
+    "createdAt": "2026-03-11T10:57:04.667Z"
+  },
+  {
+    "id": "user-93c0c482-23c9-4302-98a3-3a1f163b38ce",
+    "name": "Bradley",
+    "surname": "Viljoen",
+    "email": "bradley@outerjoin.co.za",
+    "cell": "",
+    "roleId": "role-cam",
+    "passwordHash": "$2b$10$5rWsCTkNnUHTgsrB1akwFeswnPrDcrbJnvZusn3TNRv7LRUGhzwFO",
+    "active": true,
+    "forcePasswordChange": true,
+    "firstLoginAt": null,
+    "createdAt": "2026-03-11T10:57:04.717Z"
+  },
+  {
+    "id": "user-b2c3b444-5c80-49a6-8b5a-88c940d41504",
+    "name": "Nicolas",
+    "surname": "Dolo",
+    "email": "nicolas@outerjoin.co.za",
+    "cell": "",
+    "roleId": "role-cam",
+    "passwordHash": "$2b$10$XMNCOjU6c/eS6g59XZgcdOQCziZzVZ9HAJ.9lb1PBYmtHzpxlgwSS",
+    "active": true,
+    "forcePasswordChange": true,
+    "firstLoginAt": null,
+    "createdAt": "2026-03-11T10:57:04.764Z"
+  },
+  {
+    "id": "user-80a66bb0-7771-4d22-bcb3-7a35e20665eb",
+    "name": "Mark",
+    "surname": "Blackburn",
+    "email": "mark@outerjoin.co.za",
+    "cell": "",
+    "roleId": "role-cam",
+    "passwordHash": "$2b$10$/XagZZXeP6tI/WIpuPgs/ePBtnlgtcbFMv1uh94BI6inm8GhKNYWu",
+    "active": true,
+    "forcePasswordChange": true,
+    "firstLoginAt": null,
+    "createdAt": "2026-03-11T10:57:04.812Z"
   }
 ]

@@ -7,13 +7,26 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { name } = body as { name: string };
+  const { name, mandateFileName, mandateBase64, mandateEmailSubject, mandateEmailBody } = body as {
+    name: string;
+    mandateFileName?: string;
+    mandateBase64?: string;
+    mandateEmailSubject?: string;
+    mandateEmailBody?: string;
+  };
   const channels = await getChannels();
   const idx = channels.findIndex((c) => c.id === id);
   if (idx === -1) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  channels[idx] = { ...channels[idx], name: name.trim() };
+  channels[idx] = {
+    ...channels[idx],
+    name: name.trim(),
+    mandateFileName,
+    mandateBase64,
+    mandateEmailSubject,
+    mandateEmailBody,
+  };
   await saveChannels(channels);
   return NextResponse.json(channels[idx]);
 }

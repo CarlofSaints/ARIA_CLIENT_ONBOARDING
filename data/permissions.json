@@ -17,5 +17,6 @@
   { "id": "checklist-edit", "name": "Edit Checklist Items", "description": "Edit existing checklist items" },
   { "id": "assign-channels-clients", "name": "Assign Channels to Clients", "description": "Link channels to client accounts" },
   { "id": "remove-channels-clients", "name": "Remove Channels from Clients", "description": "Unlink channels from client accounts" },
-  { "id": "manage-users", "name": "Manage Users", "description": "Create, edit, deactivate, and delete system users" }
+  { "id": "manage-users", "name": "Manage Users", "description": "Create, edit, deactivate, and delete system users" },
+  { "id": "view-activity-log", "name": "View Activity Log", "description": "View the system activity log showing process runs, successes, and failures" }
 ]

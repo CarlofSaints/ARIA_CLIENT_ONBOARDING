@@ -42,7 +42,7 @@
   {
     "id": "cl-nda-sent",
     "label": "NDA sent to client",
-    "description": "Automatically sent from the app via QuicklySign",
+    "description": "Auto-checked when the NDA is sent via the app",
     "section": "legal",
     "type": "auto",
     "dynamic": false,
@@ -52,9 +52,9 @@
   {
     "id": "cl-nda-signed",
     "label": "NDA signed by client",
-    "description": "Auto-detected via QuicklySign API when client signs",
+    "description": "CAM confirms when the signed NDA is returned",
     "section": "legal",
-    "type": "auto",
+    "type": "manual",
     "dynamic": false,
     "order": 6,
     "active": true
@@ -62,9 +62,9 @@
   {
     "id": "cl-sla-sent",
     "label": "SLA sent to client",
-    "description": "Automatically sent from the app via QuicklySign",
+    "description": "CAM confirms once the SLA has been sent",
     "section": "legal",
-    "type": "auto",
+    "type": "manual",
     "dynamic": false,
     "order": 7,
     "active": true
@@ -72,9 +72,9 @@
   {
     "id": "cl-sla-signed",
     "label": "SLA signed by client",
-    "description": "Auto-detected via QuicklySign API when client signs",
+    "description": "CAM confirms when the signed SLA is returned",
     "section": "legal",
-    "type": "auto",
+    "type": "manual",
     "dynamic": false,
     "order": 8,
     "active": true
@@ -121,7 +121,7 @@
   },
   {
     "id": "cl-ctrl-product",
-    "label": "Control file: Product Management File",
+    "label": "Control file: Product Management File (PMF)",
     "description": "CAM confirms the Product Management File has been created",
     "section": "technical",
     "type": "manual",
@@ -131,33 +131,35 @@
   },
   {
     "id": "cl-ctrl-ranging",
-    "label": "Control file: Ranging File",
-    "description": "CAM confirms the Ranging File has been created",
+    "label": "Control file: Ranging",
+    "description": "CAM confirms the Ranging file has been created — per channel",
     "section": "technical",
     "type": "manual",
-    "dynamic": false,
+    "dynamic": true,
     "order": 14,
     "active": true
   },
   {
     "id": "cl-ctrl-promo",
-    "label": "Control file: Promo File",
-    "description": "CAM confirms the Promo File has been created",
+    "label": "Control file: Promotions",
+    "description": "CAM confirms the Promotions Control File has been created — per channel",
     "section": "technical",
     "type": "manual",
-    "dynamic": false,
+    "dynamic": true,
     "order": 15,
-    "active": true
+    "active": true,
+    "optional": true
   },
   {
     "id": "cl-ctrl-tags",
     "label": "Control file: Custom Store Tags",
-    "description": "CAM confirms the Custom Store Tags file has been created",
+    "description": "CAM confirms the Custom Store Tags file has been created — per channel",
     "section": "technical",
     "type": "manual",
-    "dynamic": false,
+    "dynamic": true,
     "order": 16,
-    "active": true
+    "active": true,
+    "optional": true
   },
   {
     "id": "cl-aria-lite-addin",
@@ -167,7 +169,8 @@
     "type": "manual",
     "dynamic": false,
     "order": 17,
-    "active": true
+    "active": true,
+    "optional": true
   },
   {
     "id": "cl-aria-lite-shared",
@@ -177,7 +180,8 @@
     "type": "manual",
     "dynamic": false,
     "order": 18,
-    "active": true
+    "active": true,
+    "optional": true
   },
   {
     "id": "cl-pbi-accounts",
@@ -187,7 +191,8 @@
     "type": "manual",
     "dynamic": false,
     "order": 19,
-    "active": true
+    "active": true,
+    "optional": true
   },
   {
     "id": "cl-training",
@@ -217,6 +222,58 @@
     "type": "manual",
     "dynamic": false,
     "order": 22,
+    "active": true
+  },
+  {
+    "id": "cl-signoff-pmf",
+    "label": "PMF signed off by client",
+    "description": "Client has approved the Product Management File via Cognito sign-off form",
+    "section": "signoff",
+    "type": "either",
+    "dynamic": false,
+    "order": 23,
+    "active": true
+  },
+  {
+    "id": "cl-signoff-links",
+    "label": "Links File signed off by client",
+    "description": "Client has approved the Links File via Cognito sign-off form",
+    "section": "signoff",
+    "type": "either",
+    "dynamic": false,
+    "order": 24,
+    "active": true
+  },
+  {
+    "id": "cl-signoff-tags",
+    "label": "Custom Store Tags signed off by client",
+    "description": "Client has approved Custom Store Tags — per channel. Non-mandatory.",
+    "section": "signoff",
+    "type": "either",
+    "dynamic": true,
+    "order": 25,
+    "active": true,
+    "optional": true
+  },
+  {
+    "id": "cl-signoff-promo",
+    "label": "Promotions Control File signed off by client",
+    "description": "Client has approved the Promotions Control File — per channel. Non-mandatory.",
+    "section": "signoff",
+    "type": "either",
+    "dynamic": true,
+    "order": 26,
+    "active": true,
+    "optional": true
+  },
+  {
+    "id": "cl-signoff-ranging",
+    "label": "Ranging signed off by client",
+    "description": "Client has approved the Ranging file — per channel",
+    "section": "signoff",
+    "type": "either",
+    "dynamic": true,
+    "order": 27,
     "active": true
   }
 ]

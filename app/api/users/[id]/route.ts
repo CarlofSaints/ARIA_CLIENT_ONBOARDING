@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { after } from "next/server";
 import { getUsers, saveUsers } from "@/lib/dataStore";
+import { sendUserWelcomeEmail } from "@/lib/email";
 
 export async function PUT(
   request: Request,
@@ -8,7 +10,7 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { name, surname, email, cell, roleId, active, password, forcePasswordChange } = body as {
+  const { name, surname, email, cell, roleId, active, password, forcePasswordChange, notifyUser } = body as {
     name?: string;
     surname?: string;
     email?: string;
@@ -17,6 +19,7 @@ export async function PUT(
     active?: boolean;
     password?: string;
     forcePasswordChange?: boolean;
+    notifyUser?: boolean;
   };
 
   const users = await getUsers();
@@ -37,6 +40,19 @@ export async function PUT(
   }
 
   await saveUsers(users);
+
+  if (notifyUser && password) {
+    const recipientName = users[idx].name;
+    const recipientEmail = users[idx].email;
+    after(async () => {
+      try {
+        await sendUserWelcomeEmail({ name: recipientName, email: recipientEmail, password });
+      } catch (e) {
+        console.error("[users/[id] PUT] sendUserWelcomeEmail failed:", e);
+      }
+    });
+  }
+
   const { passwordHash: _, ...safe } = users[idx];
   return NextResponse.json(safe);
 }

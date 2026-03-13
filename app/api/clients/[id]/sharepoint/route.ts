@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { getClients, saveClients } from "@/lib/dataStore";
 import { getOJToken, graph, graphJson, pollSPCopy, SP_HOST } from "@/lib/graphOJ";
+import { addLog } from "@/lib/activityLog";
 
 const TEMPLATE_PATH = "_ClientFolderTemplate/ARIA";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const body = await request.json().catch(() => ({})) as { userId?: string; userName?: string };
   const clients = await getClients();
   const idx = clients.findIndex((c) => c.id === id);
   if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -90,9 +92,29 @@ export async function POST(
       await saveClients(freshClients);
     }
 
+    await addLog({
+      action: "sharepoint.created",
+      clientId: client.id,
+      clientName: client.name,
+      userId: body.userId,
+      userName: body.userName,
+      details: `SharePoint folder structure created at ${clientFolderName}/ARIA.`,
+      success: true,
+    });
     return NextResponse.json({ ok: true, folder: `${clientFolderName}/ARIA` });
   } catch (err) {
     console.error("SharePoint folder creation error:", err);
+    const errMsg = (err as Error).message ?? String(err);
+    await addLog({
+      action: "sharepoint.created",
+      clientId: client.id,
+      clientName: client.name,
+      userId: body.userId,
+      userName: body.userName,
+      details: "SharePoint folder creation failed.",
+      success: false,
+      error: errMsg.slice(0, 300),
+    });
     const freshClients = await getClients();
     const freshIdx = freshClients.findIndex((c) => c.id === id);
     if (freshIdx !== -1) {

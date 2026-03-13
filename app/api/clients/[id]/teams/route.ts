@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { getClients, saveClients, getCams } from "@/lib/dataStore";
 import { getOJToken, graph, graphJson, pollTeamsOp } from "@/lib/graphOJ";
+import { addLog } from "@/lib/activityLog";
 
 const FIXED_OWNERS = ["carl@outerjoin.co.za", "mark@outerjoin.co.za"];
 const TENANT_ID = process.env.OJ_TENANT_ID!;
@@ -27,6 +28,7 @@ async function buildOwnerMembers(token: string, emails: string[]) {
 }
 
 async function createTeamsStructure(clientId: string) {
+  const warnings: string[] = [];
   const [clients, cams] = await Promise.all([getClients(), getCams()]);
   const client = clients.find((c) => c.id === clientId);
   if (!client) throw new Error("Client not found");
@@ -37,14 +39,22 @@ async function createTeamsStructure(clientId: string) {
   const token = await getOJToken();
   const ownerMembers = await buildOwnerMembers(token, ownerEmails);
 
+  if (ownerMembers.length === 0) {
+    throw new Error(
+      `No owner accounts could be resolved. Checked: ${ownerEmails.join(", ")}. ` +
+      `Ensure the Azure app has User.Read.All (application permission) and the accounts exist in the tenant.`
+    );
+  }
+
   // --- 1. Create Team ---
+  // App-only tokens only support one member at creation time; add remaining owners after provisioning
   const createRes = await graph(token, "/teams", {
     method: "POST",
     body: JSON.stringify({
       "template@odata.bind": "https://graph.microsoft.com/v1.0/teamsTemplates('standard')",
       displayName: client.name,
       description: `ARIA Client Team — ${client.name}`,
-      members: ownerMembers,
+      members: [ownerMembers[0]],
     }),
   });
 
@@ -58,6 +68,18 @@ async function createTeamsStructure(clientId: string) {
 
   // --- 2. Poll for provisioning ---
   const teamId = await pollTeamsOp(monitorUrl, token);
+
+  // --- 2b. Add remaining owners ---
+  for (const member of ownerMembers.slice(1)) {
+    try {
+      await graph(token, `/teams/${teamId}/members`, {
+        method: "POST",
+        body: JSON.stringify(member),
+      });
+    } catch (e) {
+      console.warn("Could not add additional owner (non-fatal):", e);
+    }
+  }
 
   // --- 3. Set team photo ---
   if (client.logoBase64) {
@@ -86,40 +108,64 @@ async function createTeamsStructure(clientId: string) {
       description: "Client-facing shared channel",
     }),
   });
-  const extChannel = extRes.ok ? await extRes.json() : null;
-  const extChannelId = extChannel?.id as string | undefined;
+  const extText = await extRes.text();
+  let extChannelId: string | undefined;
+  try { if (extRes.ok) extChannelId = JSON.parse(extText)?.id; } catch {}
+  if (!extChannelId) {
+    warnings.push(`EXTERNAL channel creation failed: ${extRes.status} ${extText}`.slice(0, 250));
+  }
 
   // --- 5. Create INTERNAL channel (private) ---
+  // App-only tokens only support one member at channel creation; add remaining after
   const intRes = await graph(token, `/teams/${teamId}/channels`, {
     method: "POST",
     body: JSON.stringify({
       displayName: `${client.name} - INTERNAL`,
       membershipType: "private",
       description: "Internal operations channel",
-      members: ownerMembers,
+      members: [ownerMembers[0]],
     }),
   });
-  const intChannel = intRes.ok ? await intRes.json() : null;
-  const intChannelId = intChannel?.id as string | undefined;
+  const intText = await intRes.text();
+  let intChannelId: string | undefined;
+  try { if (intRes.ok) intChannelId = JSON.parse(intText)?.id; } catch {}
+  if (!intChannelId) {
+    warnings.push(`INTERNAL channel creation failed: ${intRes.status} ${intText}`.slice(0, 250));
+  } else {
+    // Add remaining owners to the private channel
+    for (const member of ownerMembers.slice(1)) {
+      try {
+        await graph(token, `/teams/${teamId}/channels/${intChannelId}/members`, {
+          method: "POST",
+          body: JSON.stringify(member),
+        });
+      } catch (e) {
+        console.warn("Could not add member to INTERNAL channel (non-fatal):", e);
+      }
+    }
+  }
 
   // --- 6. Planner: create plan + buckets + tab on EXTERNAL ---
   if (extChannelId) {
     try {
-      // Small delay to allow team's group to settle
-      await new Promise((r) => setTimeout(r, 3000));
+      // Wait for team's group to fully settle before Planner operations
+      await new Promise((r) => setTimeout(r, 8000));
 
       const planRes = await graph(token, "/planner/plans", {
         method: "POST",
         body: JSON.stringify({
           container: {
-            url: `https://graph.microsoft.com/v1.0/groups/${teamId}`,
             type: "group",
+            containerId: teamId,
           },
           title: `${client.name} — Onboarding`,
         }),
       });
 
-      if (planRes.ok) {
+      if (!planRes.ok) {
+        const t = await planRes.text().catch(() => "");
+        warnings.push(`Planner plan creation failed: ${planRes.status} ${t}`.slice(0, 200));
+      } else {
         const plan = await planRes.json();
         const planId = plan.id as string;
 
@@ -137,7 +183,7 @@ async function createTeamsStructure(clientId: string) {
         }
 
         // Pin Planner tab to EXTERNAL channel
-        await graph(token, `/teams/${teamId}/channels/${extChannelId}/tabs`, {
+        const tabRes = await graph(token, `/teams/${teamId}/channels/${extChannelId}/tabs`, {
           method: "POST",
           body: JSON.stringify({
             displayName: "Planner",
@@ -145,23 +191,31 @@ async function createTeamsStructure(clientId: string) {
               "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps('com.microsoft.teamspace.tab.planner')",
             configuration: {
               entityId: planId,
-              contentUrl: `https://tasks.office.com/${TENANT_ID}/Home/PlannerFrame?page=7&planId=${planId}`,
+              contentUrl: `https://tasks.office.com/${TENANT_ID}/Home/PlannerFrame?page=7&planId=${planId}&mkt=en-US`,
               websiteUrl: `https://tasks.office.com/${TENANT_ID}/Home/PlanViews/${planId}`,
-              removeUrl: `https://tasks.office.com/${TENANT_ID}/Home/PlannerFrame?page=13&planId=${planId}`,
+              removeUrl: `https://tasks.office.com/${TENANT_ID}/Home/PlannerFrame?page=13&planId=${planId}&mkt=en-US`,
             },
           }),
         });
+        if (!tabRes.ok) {
+          const t = await tabRes.text().catch(() => "");
+          warnings.push(`Planner tab pin failed: ${tabRes.status} ${t}`.slice(0, 200));
+        }
       }
     } catch (e) {
-      console.warn("Planner setup failed (non-fatal):", e);
+      warnings.push(`Planner setup error: ${(e as Error).message}`.slice(0, 200));
     }
   }
 
   // --- 7. SharePoint Lists: create list + columns + tab on INTERNAL ---
+  // Use the team's main SP site (always ready after provisioning; private channel members have access)
   if (intChannelId) {
     try {
       const teamSiteRes = await graph(token, `/groups/${teamId}/sites/root`);
-      if (teamSiteRes.ok) {
+      if (!teamSiteRes.ok) {
+        const t = await teamSiteRes.text().catch(() => "");
+        warnings.push(`Team site fetch failed: ${teamSiteRes.status} ${t}`.slice(0, 200));
+      } else {
         const teamSite = await teamSiteRes.json();
         const teamSiteId = teamSite.id as string;
         const teamSiteUrl = teamSite.webUrl as string;
@@ -175,7 +229,10 @@ async function createTeamsStructure(clientId: string) {
           }),
         });
 
-        if (listRes.ok) {
+        if (!listRes.ok) {
+          const t = await listRes.text().catch(() => "");
+          warnings.push(`Action list creation failed: ${listRes.status} ${t}`.slice(0, 200));
+        } else {
           const list = await listRes.json();
           const listId = list.id as string;
 
@@ -191,49 +248,60 @@ async function createTeamsStructure(clientId: string) {
           ];
 
           for (const col of columns) {
-            await graph(token, `/sites/${teamSiteId}/lists/${listId}/columns`, {
+            const colRes = await graph(token, `/sites/${teamSiteId}/lists/${listId}/columns`, {
               method: "POST",
               body: JSON.stringify(col),
             });
+            if (!colRes.ok) {
+              const t = await colRes.text().catch(() => "");
+              warnings.push(`Column "${col.name}" failed: ${colRes.status} ${t}`.slice(0, 150));
+            }
           }
 
-          // Pin Lists tab to INTERNAL channel
-          await graph(token, `/teams/${teamId}/channels/${intChannelId}/tabs`, {
+          // Pin Lists tab to INTERNAL channel using the channel's own SP site URL
+          const listTabRes = await graph(token, `/teams/${teamId}/channels/${intChannelId}/tabs`, {
             method: "POST",
             body: JSON.stringify({
-              displayName: listName,
+              displayName: "Action List",
               "teamsApp@odata.bind":
                 "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps('2a527703-1f6f-4559-a332-d8a7d288cd88')",
               configuration: {
-                entityId: listId,
-                contentUrl: `${teamSiteUrl}/_layouts/15/teamslogon.aspx?SPFX=true&dest=${teamSiteUrl}/_layouts/15/SPListApp.aspx?listId=${listId}&source=teamtab`,
+                entityId: `{${listId}}`,
+                contentUrl: `${teamSiteUrl}/_layouts/15/SPListApp.aspx?listId={${listId}}&source=teamtab`,
                 websiteUrl: `${teamSiteUrl}/Lists/${encodeURIComponent(listName)}`,
-                removeUrl: null,
+                removeUrl: "",
               },
             }),
           });
+          if (!listTabRes.ok) {
+            const t = await listTabRes.text().catch(() => "");
+            warnings.push(`Action List tab pin failed: ${listTabRes.status} ${t}`.slice(0, 200));
+          }
         }
       }
     } catch (e) {
-      console.warn("Lists setup failed (non-fatal):", e);
+      warnings.push(`Lists setup error: ${(e as Error).message}`.slice(0, 200));
     }
   }
 
-  // --- 8. Persist team ID and status ---
+  // --- 8. Persist team ID, status, and any non-fatal warnings ---
   const freshClients = await getClients();
   const freshIdx = freshClients.findIndex((c) => c.id === clientId);
   if (freshIdx !== -1) {
     freshClients[freshIdx].teamsStatus = "created";
     freshClients[freshIdx].teamsId = teamId;
+    freshClients[freshIdx].teamsError = undefined;
+    freshClients[freshIdx].teamsWarnings = warnings.length > 0 ? warnings : undefined;
     await saveClients(freshClients);
   }
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const body = await request.json().catch(() => ({})) as { userId?: string; userName?: string };
   const clients = await getClients();
   const idx = clients.findIndex((c) => c.id === id);
   if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -247,19 +315,41 @@ export async function POST(
     return NextResponse.json({ status: "creating" });
   }
 
-  // Set to creating and return immediately
+  // Set to creating and return immediately; clear any previous error
   clients[idx].teamsStatus = "creating";
+  clients[idx].teamsError = undefined;
   await saveClients(clients);
 
   after(async () => {
     try {
       await createTeamsStructure(id);
+      await addLog({
+        action: "teams.created",
+        clientId: client.id,
+        clientName: client.name,
+        userId: body.userId,
+        userName: body.userName,
+        details: "Teams structure (team, channels, Planner, Action List) created successfully.",
+        success: true,
+      });
     } catch (err) {
       console.error("Teams creation error:", err);
+      const errMsg = (err as Error).message?.slice(0, 300) ?? "Unknown error";
+      await addLog({
+        action: "teams.created",
+        clientId: client.id,
+        clientName: client.name,
+        userId: body.userId,
+        userName: body.userName,
+        details: "Teams structure creation failed.",
+        success: false,
+        error: errMsg,
+      });
       const freshClients = await getClients();
       const freshIdx = freshClients.findIndex((c) => c.id === id);
       if (freshIdx !== -1) {
         freshClients[freshIdx].teamsStatus = "error";
+        freshClients[freshIdx].teamsError = errMsg;
         await saveClients(freshClients);
       }
     }

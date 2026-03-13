@@ -36,6 +36,30 @@ const adminCards = [
     href: "/admin/checklist",
     icon: "✅",
   },
+  {
+    title: "Personnel Form",
+    description: "Configure role options and custom fields for the client personnel data collection form.",
+    href: "/admin/personnel",
+    icon: "👥",
+  },
+  {
+    title: "Activity Log",
+    description: "View a full audit trail of system events — client creation, emails, SharePoint, Teams, checklist changes, and more.",
+    href: "/admin/logs",
+    icon: "📋",
+  },
+  {
+    title: "Xero Integration",
+    description: "Connect your Xero organisation so CAMs can push client billing data directly to Xero as Contacts.",
+    href: "/admin/xero",
+    icon: "🔗",
+  },
+  {
+    title: "Legal Templates",
+    description: "Upload the NDA Word template. Placeholders are filled automatically from the client's Cognito data when sent.",
+    href: "/admin/legal",
+    icon: "📄",
+  },
 ];
 
 export default function AdminDashboard() {

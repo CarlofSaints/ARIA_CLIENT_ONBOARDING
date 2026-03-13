@@ -1,0 +1,13 @@
+{
+  "roleOptions": [
+    { "id": "role-kam",      "label": "KAM",                        "active": true, "order": 1 },
+    { "id": "role-md",       "label": "MD",                         "active": true, "order": 2 },
+    { "id": "role-mktg",     "label": "Marketing Manager/Director", "active": true, "order": 3 },
+    { "id": "role-sm",       "label": "Sales Manager",              "active": true, "order": 4 },
+    { "id": "role-sd",       "label": "Sales Director",             "active": true, "order": 5 },
+    { "id": "role-accounts", "label": "Accounts",                   "active": true, "order": 6 },
+    { "id": "role-analyst",  "label": "Analyst",                    "active": true, "order": 7 },
+    { "id": "role-pm",       "label": "Product Manager",            "active": true, "order": 8 }
+  ],
+  "customFields": []
+}

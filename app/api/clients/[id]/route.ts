@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClients, saveClients } from "@/lib/dataStore";
+import { addLog } from "@/lib/activityLog";
 
 export async function PUT(
   request: Request,
@@ -23,10 +24,11 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const clients = await getClients();
-  const filtered = clients.filter((c) => c.id !== id);
-  if (filtered.length === clients.length) {
+  const target = clients.find((c) => c.id === id);
+  if (!target) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  await saveClients(filtered);
+  await saveClients(clients.filter((c) => c.id !== id));
+  await addLog({ action: "client.deleted", clientId: id, clientName: target.name, details: "Client permanently deleted.", success: true });
   return NextResponse.json({ ok: true });
 }
