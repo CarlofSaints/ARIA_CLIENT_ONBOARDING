@@ -120,9 +120,9 @@ async function createTeamsStructure(clientId: string) {
   const intRes = await graph(token, `/teams/${teamId}/channels`, {
     method: "POST",
     body: JSON.stringify({
-      displayName: `${client.name} - INTERNAL`,
-      membershipType: "private",
-      description: "Internal operations channel",
+      displayName: `${client.name} - PRIVATE`,
+      membershipType: "standard",
+      description: "Internal operations channel (set to private manually after creation)",
       members: [ownerMembers[0]],
     }),
   });
