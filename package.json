@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@vercel/kv": "^3.0.0",
+    "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.3",
     "docxtemplater": "^3.68.3",
     "exceljs": "^4.4.0",

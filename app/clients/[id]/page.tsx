@@ -10,89 +10,24 @@ import PersonnelEmailModal from "@/components/PersonnelEmailModal";
 import CognitoLinkModal from "@/components/CognitoLinkModal";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 import ControlFileSignOffModal from "@/components/ControlFileSignOffModal";
-
-type ChecklistItemDef = {
-  id: string;
-  label: string;
-  description?: string;
-  section: string;
-  type: "manual" | "auto" | "either";
-  dynamic: boolean;
-  order: number;
-  active: boolean;
-  optional?: boolean;
-};
-
-type ChecklistItemState = {
-  completed: boolean;
-  completedAt?: string;
-  completedBy?: string;
-  channelStates?: Record<string, { completed: boolean; completedAt?: string }>;
-};
-
-type Client = {
-  id: string;
-  name: string;
-  logoBase64?: string;
-  website?: string;
-  camId: string;
-  emails: string[];
-  startDate: string;
-  channelIds: string[];
-  contactName: string;
-  status: string;
-  checklist: Record<string, ChecklistItemState>;
-  createdAt: string;
-  sharepointStatus?: "created" | "error";
-  teamsStatus?: "creating" | "created" | "error";
-  teamsId?: string;
-  teamsError?: string;
-  teamsWarnings?: string[];
-  personnelToken?: string;
-  personnelSubmittedAt?: string;
-  personnelSpUrl?: string;
-  personnelSubmission?: PersonnelRow[];
-  cognitoEntryId?: string;
-  cognitoData?: Record<string, unknown>;
-  cognitoLinkedAt?: string;
-  xeroContactId?: string;
-  xeroContactUrl?: string;
-  ndaSentAt?: string;
-  signOffEmailSentAt?: string;
-  archived?: boolean;
-  archivedAt?: string;
-};
-
-type PersonnelRow = {
-  role: string; name: string; email: string; cell: string;
-  channels: string[]; customFields?: Record<string, string>;
-};
+import StepProgressBar from "@/components/StepProgressBar";
+import Step1AccountSetup from "@/components/steps/Step1AccountSetup";
+import Step2ClientKickoff from "@/components/steps/Step2ClientKickoff";
+import Step3Infrastructure from "@/components/steps/Step3Infrastructure";
+import Step4ControlFiles from "@/components/steps/Step4ControlFiles";
+import Step5TrainingHandover from "@/components/steps/Step5TrainingHandover";
+import type {
+  ChecklistItemDef,
+  ChecklistItemState,
+  Client,
+  Channel,
+  PersonnelRow,
+  Session,
+} from "@/components/steps/types";
 
 type CAM = { id: string; name: string; surname: string; email: string };
-type Channel = {
-  id: string;
-  name: string;
-  logoFileName?: string;
-  mandateFileName?: string;
-  mandateBase64?: string;
-  mandateEmailSubject?: string;
-  mandateEmailBody?: string;
-};
 
-const SECTIONS: { value: string; label: string }[] = [
-  { value: "onboarding", label: "Onboarding" },
-  { value: "legal", label: "Legal & Compliance" },
-  { value: "channels", label: "Channels" },
-  { value: "technical", label: "Technical Setup" },
-  { value: "training", label: "Training & Handover" },
-  { value: "signoff", label: "Client Sign-off" },
-];
-
-const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
-  manual: { label: "manual", cls: "bg-blue-50 text-blue-600 border border-blue-200" },
-  auto: { label: "auto", cls: "bg-green-50 text-green-600 border border-green-200" },
-  either: { label: "either", cls: "bg-amber-50 text-amber-600 border border-amber-200" },
-};
+const STEP_COUNT = 5;
 
 function computeScore(
   defs: ChecklistItemDef[],
@@ -130,6 +65,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [checklist, setChecklist] = useState<Record<string, ChecklistItemState>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+
   const [spLoading, setSpLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [infraError, setInfraError] = useState("");
@@ -151,6 +88,13 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [ndaSent, setNdaSent] = useState(false);
   const [ndaError, setNdaError] = useState("");
   const [signOffModalOpen, setSignOffModalOpen] = useState(false);
+
+  // Derive isAdmin from session permissions/role
+  const typedSession = session as Session;
+  const isAdmin = !!(
+    typedSession?.permissions?.includes("manage_clients") ||
+    typedSession?.role?.toLowerCase().includes("admin")
+  );
 
   const loadClient = async () => {
     const [clientsData, defsData, camsData, channelsData] = await Promise.all([
@@ -197,7 +141,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       const res = await fetch(`/api/clients/${id}/sharepoint`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session?.id, userName: session ? `${session.name} ${session.surname}` : undefined }),
+        body: JSON.stringify({ userId: typedSession?.id, userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined }),
       });
       const data = await res.json();
       if (!res.ok) { setInfraError(data.error ?? "SharePoint creation failed"); return; }
@@ -217,7 +161,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       const res = await fetch(`/api/clients/${id}/teams`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session?.id, userName: session ? `${session.name} ${session.surname}` : undefined }),
+        body: JSON.stringify({ userId: typedSession?.id, userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined }),
       });
       const data = await res.json();
       if (!res.ok) { setInfraError(data.error ?? "Teams creation failed"); return; }
@@ -262,8 +206,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: session?.id,
-          userName: session ? `${session.name} ${session.surname}` : undefined,
+          userId: typedSession?.id,
+          userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined,
         }),
       });
       const data = await res.json();
@@ -291,7 +235,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       const res = await fetch(`/api/clients/${id}/nda`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session?.id, userName: session ? `${session.name} ${session.surname}` : undefined }),
+        body: JSON.stringify({ userId: typedSession?.id, userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined }),
       });
       const data = await res.json();
       if (!res.ok) { setNdaError(data.error ?? "Failed to send NDA"); return; }
@@ -313,8 +257,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           channelId,
-          userId: session?.id,
-          userName: session ? `${session.name} ${session.surname}` : undefined,
+          userId: typedSession?.id,
+          userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined,
         }),
       });
       setMandateSent((s) => ({ ...s, [channelId]: true }));
@@ -325,6 +269,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleSendAllMandates = async () => {
+    const clientChannels = channels.filter((ch) => client?.channelIds.includes(ch.id));
     const mandateChannels = clientChannels.filter((ch) => ch.mandateBase64 && ch.mandateEmailSubject);
     if (mandateChannels.length === 0) return;
     setMandateSendingAll(true);
@@ -370,7 +315,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     const newState: ChecklistItemState = {
       completed: newCompleted,
       completedAt: newCompleted ? now : undefined,
-      completedBy: newCompleted ? (session?.id ?? "user") : undefined,
+      completedBy: newCompleted ? (typedSession?.id ?? "user") : undefined,
     };
     const itemDef = defs.find((d) => d.id === itemId);
     const res = await fetch(`/api/clients/${id}/checklist`, {
@@ -379,8 +324,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       body: JSON.stringify({
         itemId,
         state: newState,
-        userId: session?.id,
-        userName: session ? `${session.name} ${session.surname}` : undefined,
+        userId: typedSession?.id,
+        userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined,
         itemLabel: itemDef?.label,
       }),
     });
@@ -412,8 +357,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       body: JSON.stringify({
         itemId,
         state: newState,
-        userId: session?.id,
-        userName: session ? `${session.name} ${session.surname}` : undefined,
+        userId: typedSession?.id,
+        userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined,
         itemLabel: itemDef ? `${itemDef.label} — ${channelName}` : channelName,
       }),
     });
@@ -422,6 +367,24 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setClient((c) => c ? { ...c, checklist: updated } : c);
     setSaving(null);
   };
+
+  // Blocking items for current step
+  function getBlockingItems(step: number): string[] {
+    if (!client) return [];
+    const stepDefs = defs.filter(
+      (d) => d.active && !d.optional && !(d.skippable ?? false) && (d.step ?? 1) === step
+    );
+    return stepDefs
+      .filter((def) => {
+        const state = checklist[def.id];
+        if (def.dynamic) {
+          if (!state?.channelStates) return client.channelIds.length > 0;
+          return client.channelIds.some((cId) => !state.channelStates![cId]?.completed);
+        }
+        return !state?.completed;
+      })
+      .map((def) => def.label);
+  }
 
   if (!ready || loading) return null;
   if (!client) {
@@ -436,11 +399,21 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const cam = cams.find((c) => c.id === client.camId);
   const clientChannels = channels.filter((ch) => client.channelIds.includes(ch.id));
   const score = computeScore(defs, checklist, client.channelIds);
+  const blockingItems = getBlockingItems(currentStep);
+  const isBlocked = blockingItems.length > 0;
 
-  const groupedDefs = SECTIONS.map((sec) => ({
-    ...sec,
-    items: defs.filter((i) => i.active && i.section === sec.value),
-  })).filter((sec) => sec.items.length > 0);
+  // Common props for all step components
+  const commonProps = {
+    client,
+    channels,
+    checklist,
+    defs,
+    isAdmin,
+    session: typedSession,
+    saving,
+    onToggleItem: toggleItem,
+    onToggleChannelItem: toggleChannelItem,
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
@@ -483,11 +456,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             {clientChannels.map((ch) => (
               ch.logoFileName ? (
                 <div key={ch.id} title={ch.name} className="h-7 px-2 flex items-center justify-center bg-white border border-oj-border rounded-lg shadow-sm">
-                  <img
-                    src={`/channel-logos/${ch.logoFileName}`}
-                    alt={ch.name}
-                    className="h-5 w-auto max-w-[60px] object-contain"
-                  />
+                  <img src={`/channel-logos/${ch.logoFileName}`} alt={ch.name} className="h-5 w-auto max-w-[60px] object-contain" />
                 </div>
               ) : (
                 <span key={ch.id} className="text-xs bg-oj-blue-light text-oj-blue px-2 py-0.5 rounded-full font-medium">
@@ -500,512 +469,110 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Channels & Mandates */}
-      {clientChannels.length > 0 && (
-        <div className="bg-oj-white border border-oj-border rounded-xl shadow-sm mb-6 overflow-hidden">
-          <div className="px-5 py-3 bg-oj-bg border-b border-oj-border flex items-center justify-between gap-3">
-            <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">Channels &amp; Mandate Letters</span>
-            {clientChannels.some((ch) => ch.mandateBase64 && ch.mandateEmailSubject) && (
-              <button
-                onClick={handleSendAllMandates}
-                disabled={mandateSendingAll}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-blue text-white text-xs font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60"
-              >
-                {mandateSendingAll ? (
-                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span> Sending all…</>
-                ) : (
-                  <>✉ Send All Mandates</>
-                )}
-              </button>
-            )}
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-oj-border">
-                <th className="text-left px-5 py-2.5 text-xs font-bold text-oj-muted uppercase tracking-wide">Channel</th>
-                <th className="text-left px-5 py-2.5 text-xs font-bold text-oj-muted uppercase tracking-wide">Mandate Status</th>
-                <th className="px-5 py-2.5 w-36" />
-              </tr>
-            </thead>
-            <tbody>
-              {clientChannels.map((ch, i) => {
-                const hasMandate = !!(ch.mandateBase64 && ch.mandateEmailSubject);
-                const isSending = mandateSending[ch.id];
-                const isSent = mandateSent[ch.id];
-                return (
-                  <tr key={ch.id} className={`border-b border-oj-border last:border-0 ${i % 2 === 1 ? "bg-oj-bg/40" : ""}`}>
-                    <td className="px-5 py-3 font-medium text-oj-dark">{ch.name}</td>
-                    <td className="px-5 py-3">
-                      {hasMandate ? (
-                        <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">
-                          ✓ Mandate ready
-                        </span>
-                      ) : (
-                        <span className="text-xs text-oj-muted">No mandate set</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      {hasMandate && (
-                        isSent ? (
-                          <span className="text-xs font-semibold text-green-600">✓ Sent</span>
-                        ) : (
-                          <button
-                            onClick={() => handleSendMandate(ch.id)}
-                            disabled={isSending || mandateSendingAll}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-xs font-medium hover:border-oj-blue transition-colors disabled:opacity-60 ml-auto"
-                          >
-                            {isSending ? (
-                              <><span className="animate-spin inline-block w-3 h-3 border-2 border-oj-blue border-t-transparent rounded-full"></span> Sending…</>
-                            ) : (
-                              <>✉ Send Mandate</>
-                            )}
-                          </button>
-                        )
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* Step Progress Bar */}
+      <StepProgressBar
+        currentStep={currentStep}
+        defs={defs}
+        checklist={checklist}
+        channelIds={client.channelIds}
+        onStepClick={setCurrentStep}
+      />
+
+      {/* Step content */}
+      {currentStep === 1 && (
+        <Step1AccountSetup
+          {...commonProps}
+          cognitoUnlinking={cognitoUnlinking}
+          xeroConnected={xeroConnected}
+          xeroPushing={xeroPushing}
+          xeroError={xeroError}
+          ndaSending={ndaSending}
+          ndaSent={ndaSent}
+          ndaError={ndaError}
+          onCognitoOpen={() => setCognitoModalOpen(true)}
+          onCognitoUnlink={handleCognitoUnlink}
+          onXeroPush={handleXeroPush}
+          onSendNda={handleSendNda}
+          onSignOffOpen={() => setSignOffModalOpen(true)}
+        />
       )}
 
-      {/* Infrastructure Setup */}
-      <div className="bg-oj-white border border-oj-border rounded-xl p-5 shadow-sm mb-6">
-        <h2 className="text-sm font-bold text-oj-dark mb-3">Infrastructure Setup</h2>
-        <div className="flex flex-wrap gap-3">
-          {/* SharePoint */}
-          {client.sharepointStatus === "created" ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
-              <span>✓</span> SharePoint folder created
-            </div>
-          ) : (
-            <button
-              onClick={handleCreateSharePoint}
-              disabled={spLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {spLoading ? (
-                <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span> Creating folder…</>
-              ) : (
-                <>{client.sharepointStatus === "error" ? "⚠ Retry SharePoint" : "📁 Create SharePoint Folder"}</>
-              )}
-            </button>
-          )}
+      {currentStep === 2 && (
+        <Step2ClientKickoff
+          {...commonProps}
+          personnelLoading={personnelLoading}
+          personnelCopied={personnelCopied}
+          mandateSending={mandateSending}
+          mandateSent={mandateSent}
+          mandateSendingAll={mandateSendingAll}
+          onPersonnelToken={handlePersonnelToken}
+          onCopyPersonnelLink={copyPersonnelLink}
+          onPersonnelEdit={() => setEditPersonnelOpen(true)}
+          onPersonnelEmail={() => setEmailPersonnelOpen(true)}
+          onSendMandate={handleSendMandate}
+          onSendAllMandates={handleSendAllMandates}
+        />
+      )}
 
-          {/* Teams */}
-          <div className="flex flex-col gap-2">
-            {client.teamsStatus === "created" ? (
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
-                  <span>✓</span> Teams structure created
-                </div>
-                {client.teamsWarnings && client.teamsWarnings.length > 0 && (
-                  <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-sm space-y-1">
-                    <p className="font-semibold text-amber-700">Some steps had warnings:</p>
-                    {client.teamsWarnings.map((w, i) => (
-                      <p key={i} className="text-amber-700 break-words">{w}</p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : client.teamsStatus === "creating" ? (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm font-medium">
-                <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full"></span>
-                Creating Teams structure… (this takes ~30–60s)
-              </div>
-            ) : (
-              <button
-                onClick={handleCreateTeams}
-                disabled={teamsLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {teamsLoading ? (
-                  <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span> Starting…</>
-                ) : (
-                  <>{client.teamsStatus === "error" ? "⚠ Retry Teams" : "👥 Create Teams Structure"}</>
-                )}
-              </button>
-            )}
-            {client.teamsStatus === "error" && client.teamsError && (
-              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-sm break-words">
-                <strong>Teams error:</strong> {client.teamsError}
-              </p>
-            )}
-          </div>
-          {/* Personnel Form */}
-          <div className="flex flex-col gap-2">
-            {client.personnelSubmittedAt ? (
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
-                  <span>✓</span> Personnel submitted {new Date(client.personnelSubmittedAt).toLocaleDateString("en-ZA")}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setEditPersonnelOpen(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-blue text-white text-xs font-semibold hover:bg-oj-blue-hover transition-colors"
-                    >
-                      ✏ Edit Personnel Form
-                    </button>
-                    <div className="relative group">
-                      <span className="cursor-help text-oj-muted hover:text-oj-blue text-xs font-bold select-none px-1">ⓘ</span>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 bg-oj-dark text-white text-xs rounded-lg px-3 py-2 pointer-events-none shadow-lg z-20 text-center leading-relaxed">
-                        Changes you make here will update the personnel file in SharePoint automatically.
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-oj-dark" />
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEmailPersonnelOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-xs font-medium hover:border-oj-blue transition-colors"
-                  >
-                    ✉ Email Personnel Form
-                  </button>
-                  <button
-                    onClick={copyPersonnelLink}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-xs font-medium hover:border-oj-blue transition-colors"
-                  >
-                    {personnelCopied ? "✓ Copied!" : "📋 Copy Form Link"}
-                  </button>
-                  {client.personnelSpUrl && (
-                    <a
-                      href={client.personnelSpUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-blue text-xs font-medium hover:border-oj-blue transition-colors"
-                    >
-                      View in SharePoint →
-                    </a>
-                  )}
-                </div>
-              </div>
-            ) : client.personnelToken ? (
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
-                  <span>⏳</span> Awaiting personnel submission
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={copyPersonnelLink}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-xs font-medium hover:border-oj-blue transition-colors"
-                  >
-                    {personnelCopied ? "✓ Copied!" : "📋 Copy Form Link"}
-                  </button>
-                  <a
-                    href={`/personnel/${client.personnelToken}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-blue text-xs font-medium hover:border-oj-blue transition-colors"
-                  >
-                    Open Form →
-                  </a>
-                  <button
-                    onClick={() => setEmailPersonnelOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-xs font-medium hover:border-oj-blue transition-colors"
-                  >
-                    ✉ Email Personnel Form
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={handlePersonnelToken}
-                disabled={personnelLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {personnelLoading ? (
-                  <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span> Generating…</>
-                ) : (
-                  <>👤 Generate &amp; Copy Form Link</>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-        {infraError && (
-          <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{infraError}</p>
-        )}
-      </div>
+      {currentStep === 3 && (
+        <Step3Infrastructure
+          {...commonProps}
+          spLoading={spLoading}
+          teamsLoading={teamsLoading}
+          infraError={infraError}
+          onCreateSharePoint={handleCreateSharePoint}
+          onCreateTeams={handleCreateTeams}
+        />
+      )}
 
-      {/* Cognito Data */}
-      <div className="bg-oj-white border border-oj-border rounded-xl shadow-sm mb-6 overflow-hidden">
-        <div className="px-5 py-3 bg-oj-bg border-b border-oj-border flex items-center justify-between gap-3">
-          <div>
-            <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">Cognito Billing Data</span>
-            {client.cognitoLinkedAt && (
-              <span className="ml-2 text-xs text-oj-muted">
-                · linked {new Date(client.cognitoLinkedAt).toLocaleDateString("en-ZA")}
-              </span>
-            )}
-          </div>
-          {client.cognitoData ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCognitoModalOpen(true)}
-                className="text-xs font-semibold text-oj-blue hover:text-oj-blue-hover transition-colors"
-              >
-                Re-link
-              </button>
-              <button
-                onClick={handleCognitoUnlink}
-                disabled={cognitoUnlinking}
-                className="text-xs font-semibold text-oj-orange hover:text-oj-orange-hover transition-colors disabled:opacity-50"
-              >
-                {cognitoUnlinking ? "Unlinking…" : "Unlink"}
-              </button>
-            </div>
-          ) : (
+      {currentStep === 4 && (
+        <Step4ControlFiles
+          {...commonProps}
+          onSignOffOpen={() => setSignOffModalOpen(true)}
+        />
+      )}
+
+      {currentStep === 5 && (
+        <Step5TrainingHandover {...commonProps} />
+      )}
+
+      {/* Step navigation */}
+      <div className="mt-6 flex items-start justify-between gap-4">
+        <div>
+          {currentStep > 1 && (
             <button
-              onClick={() => setCognitoModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-blue text-white text-xs font-semibold hover:bg-oj-blue-hover transition-colors"
+              onClick={() => setCurrentStep((s) => s - 1)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-oj-border bg-oj-white text-oj-dark text-sm font-semibold hover:border-oj-blue transition-colors"
             >
-              + Link Cognito Entry
+              ← Back
             </button>
           )}
         </div>
-
-        {client.cognitoData ? (
-          <CognitoDataDisplay data={client.cognitoData} />
-        ) : (
-          <div className="px-5 py-6 text-sm text-oj-muted">
-            No Cognito entry linked yet. Click <strong>+ Link Cognito Entry</strong> to search and match the client's billing submission.
-          </div>
-        )}
-      </div>
-
-      {/* Xero Contact */}
-      {client.cognitoData && (
-        <div className="bg-oj-white border border-oj-border rounded-xl shadow-sm mb-6 overflow-hidden">
-          <div className="px-5 py-3 bg-oj-bg border-b border-oj-border flex items-center justify-between gap-3">
-            <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">Xero Contact</span>
-            {client.xeroContactId && (
-              <a
-                href={client.xeroContactUrl ?? `https://go.xero.com/Contacts/View/${client.xeroContactId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-oj-blue hover:underline font-medium"
-              >
-                View in Xero →
-              </a>
-            )}
-          </div>
-          <div className="px-5 py-4">
-            {client.xeroContactId ? (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg font-medium">
-                  <span>✓</span> Contact exists in Xero
-                </div>
-                <button
-                  onClick={handleXeroPush}
-                  disabled={xeroPushing}
-                  className="px-3 py-2 text-xs font-medium text-oj-muted border border-oj-border rounded-lg hover:border-oj-blue transition-colors disabled:opacity-50"
-                >
-                  {xeroPushing ? "Updating…" : "↻ Sync to Xero"}
-                </button>
-              </div>
-            ) : xeroConnected === false ? (
-              <div className="flex items-center gap-2 text-sm text-oj-muted">
-                <span>Xero not connected —</span>
-                <a href="/admin/xero" className="text-oj-blue hover:underline font-medium">Connect in Admin →</a>
-              </div>
-            ) : (
-              <button
-                onClick={handleXeroPush}
-                disabled={xeroPushing || xeroConnected === null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00B4D8] text-white text-sm font-semibold hover:bg-[#0096B4] transition-colors disabled:opacity-60"
-              >
-                {xeroPushing ? (
-                  <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" /> Creating contact…</>
-                ) : (
-                  <>Create Xero Contact</>
-                )}
-              </button>
-            )}
-            {xeroError && (
-              <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{xeroError}</p>
-            )}
-          </div>
+        <div className="flex flex-col items-end gap-2">
+          {currentStep < STEP_COUNT && (
+            <button
+              onClick={() => !isBlocked && setCurrentStep((s) => s + 1)}
+              disabled={isBlocked}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                isBlocked
+                  ? "border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                  : "bg-teal-600 text-white hover:bg-teal-700"
+              }`}
+            >
+              Next Step →
+            </button>
+          )}
+          {isBlocked && (
+            <p className="text-xs text-red-600 text-right max-w-xs">
+              Complete required items before advancing:{" "}
+              <span className="font-medium">{blockingItems.slice(0, 3).join(", ")}{blockingItems.length > 3 ? ` +${blockingItems.length - 3} more` : ""}</span>
+            </p>
+          )}
         </div>
-      )}
-
-      {/* Legal Documents */}
-      <div className="bg-oj-white border border-oj-border rounded-xl shadow-sm mb-6 overflow-hidden">
-        <div className="px-5 py-3 bg-oj-bg border-b border-oj-border flex items-center justify-between gap-3">
-          <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">Legal Documents</span>
-          <button
-            onClick={() => setSignOffModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-xs font-medium hover:border-oj-blue transition-colors"
-          >
-            ✉ Send Control File Sign-off
-          </button>
-        </div>
-        <div className="px-5 py-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* NDA */}
-            <div className="flex flex-col gap-1.5">
-              {client.ndaSentAt ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 font-medium">
-                  <span>✓</span> NDA sent {new Date(client.ndaSentAt).toLocaleDateString("en-ZA")}
-                </div>
-              ) : null}
-              {client.cognitoData ? (
-                ndaSent ? (
-                  <span className="text-xs font-semibold text-green-600 px-3 py-2">✓ NDA sent!</span>
-                ) : (
-                  <button
-                    onClick={handleSendNda}
-                    disabled={ndaSending}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60"
-                  >
-                    {ndaSending ? (
-                      <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" /> Sending NDA…</>
-                    ) : (
-                      <>{client.ndaSentAt ? "↻ Re-send NDA" : "📄 Send NDA"}</>
-                    )}
-                  </button>
-                )
-              ) : (
-                <div className="text-sm text-oj-muted px-1">
-                  Link Cognito data first to enable NDA sending.
-                </div>
-              )}
-              {ndaError && (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-sm">{ndaError}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Onboarding progress */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-bold text-oj-dark">Onboarding Checklist</h2>
-        <div className="flex items-center gap-3 text-xs text-oj-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-blue-100 border border-blue-200 inline-block"></span> manual
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-green-100 border border-green-200 inline-block"></span> auto
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-200 inline-block"></span> either
-          </span>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {groupedDefs.map((sec) => (
-          <div key={sec.value} className="bg-oj-white border border-oj-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-oj-bg border-b border-oj-border flex items-center justify-between">
-              <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">{sec.label}</span>
-              <span className="text-xs text-oj-muted">
-                {sec.items.filter((item) => {
-                  const s = checklist[item.id];
-                  if (item.dynamic) {
-                    return client.channelIds.length > 0 &&
-                      client.channelIds.every((cId) => s?.channelStates?.[cId]?.completed);
-                  }
-                  return s?.completed;
-                }).length} / {sec.items.length}
-              </span>
-            </div>
-            <ul className="divide-y divide-oj-border">
-              {sec.items.map((item) => {
-                const state = checklist[item.id];
-                const isAuto = item.type === "auto";
-                const isChecked = item.dynamic
-                  ? client.channelIds.length > 0 && client.channelIds.every((cId) => state?.channelStates?.[cId]?.completed)
-                  : (state?.completed ?? false);
-                const badge = TYPE_BADGE[item.type];
-
-                return (
-                  <li key={item.id} className="px-5 py-4">
-                    {/* Item row */}
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 shrink-0">
-                        {isAuto ? (
-                          <div className={`w-5 h-5 rounded flex items-center justify-center text-xs ${
-                            isChecked ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400 border border-gray-200"
-                          }`}>
-                            {isChecked ? "✓" : "⚙"}
-                          </div>
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={!item.dynamic && isChecked}
-                            disabled={item.dynamic || saving === item.id}
-                            onChange={() => !item.dynamic && toggleItem(item.id, !isChecked)}
-                            className="w-4 h-4 mt-0.5 accent-oj-blue cursor-pointer disabled:cursor-default"
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-sm font-medium ${isChecked ? "line-through text-oj-muted" : "text-oj-dark"}`}>
-                            {item.label}
-                          </span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>
-                          {item.dynamic && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">per-channel</span>
-                          )}
-                          {item.optional && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">optional</span>
-                          )}
-                        </div>
-                        {item.description && (
-                          <p className="text-xs text-oj-muted mt-0.5 leading-relaxed">{item.description}</p>
-                        )}
-                        {isChecked && state?.completedAt && !item.dynamic && (
-                          <p className="text-xs text-green-600 mt-0.5">
-                            ✓ {state.completedBy === "system" ? "Auto-completed" : "Completed"} ·{" "}
-                            {new Date(state.completedAt).toLocaleDateString("en-ZA")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Dynamic per-channel sub-items */}
-                    {item.dynamic && clientChannels.length > 0 && (
-                      <div className="ml-8 mt-3 grid grid-cols-2 gap-2">
-                        {clientChannels.map((ch) => {
-                          const chState = state?.channelStates?.[ch.id];
-                          const chChecked = chState?.completed ?? false;
-                          const chSaving = saving === `${item.id}-${ch.id}`;
-                          return (
-                            <label
-                              key={ch.id}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer select-none transition-colors text-sm ${
-                                chChecked
-                                  ? "bg-green-50 border-green-200 text-green-700"
-                                  : "bg-oj-bg border-oj-border text-oj-dark hover:border-oj-blue"
-                              } ${isAuto ? "cursor-default" : ""}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={chChecked}
-                                disabled={isAuto || chSaving}
-                                onChange={() => !isAuto && toggleChannelItem(item.id, ch.id, !chChecked)}
-                                className="accent-oj-blue"
-                              />
-                              <span className={chChecked ? "line-through" : ""}>{ch.name}</span>
-                              {chSaving && <span className="text-xs text-oj-muted ml-auto">…</span>}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
       </div>
 
       {/* Danger Zone */}
-      <div className="mt-8 border border-red-200 rounded-xl p-6 bg-red-50/30">
+      <div className="mt-10 border border-red-200 rounded-xl p-6 bg-red-50/30">
         <h2 className="text-sm font-bold text-red-700 mb-1">Danger Zone</h2>
         <p className="text-xs text-red-500 mb-4">These actions are irreversible or have significant impact.</p>
         <div className="flex flex-wrap gap-3">
@@ -1048,6 +615,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         )}
       </div>
 
+      {/* Modals */}
       {showDeleteModal && (
         <ConfirmDeleteModal
           clientName={client.name}
@@ -1060,7 +628,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         <PersonnelEditModal
           clientId={id}
           clientName={client.name}
-          initialRows={client.personnelSubmission ?? []}
+          initialRows={(client.personnelSubmission ?? []) as PersonnelRow[]}
           channels={clientChannels}
           onClose={() => setEditPersonnelOpen(false)}
           onSaved={async () => {
@@ -1106,143 +674,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           session={session}
           onClose={() => setSignOffModalOpen(false)}
         />
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Cognito data display — structured sections for company, address, contacts
-// ---------------------------------------------------------------------------
-
-const SKIP_KEYS = new Set([
-  "Id", "InternalId", "FormId", "Form", "Organization",
-  "Entry", "EntryId", "Status", "AdminStatus",
-  "DateCreated", "DateUpdated", "DateSubmitted",
-  "Revision", "ContentType", "ExternalId",
-]);
-
-const STRUCTURED_KEYS = new Set([
-  "CompanyName", "TradingAs", "CompanyRegistrationNumber", "VATNumber2",
-  "Email", "Phone", "Website", "Address",
-  "BillingContactPerson", "ContractContactPerson",
-]);
-
-function getDisplayLabel(key: string): string {
-  return key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim();
-}
-
-function formatAddress(addr: unknown): string {
-  if (!addr) return "";
-  if (typeof addr === "string") return addr;
-  if (typeof addr === "object") {
-    const a = addr as Record<string, string>;
-    return [a.Line1, a.Line2, a.City, a.Region, a.PostalCode].filter(Boolean).join(", ");
-  }
-  return String(addr);
-}
-
-function formatContact(val: unknown): string {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "object") {
-    const c = val as Record<string, string>;
-    const name = [c.FirstName, c.LastName].filter(Boolean).join(" ");
-    return [name, c.EmailAddress].filter(Boolean).join(" — ");
-  }
-  return String(val);
-}
-
-function CognitoField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold text-oj-muted mb-0.5">{label}</p>
-      <p className="text-sm text-oj-dark break-words">{value}</p>
-    </div>
-  );
-}
-
-function CognitoDataDisplay({ data }: { data: Record<string, unknown> }) {
-  const s = (key: string) => {
-    const v = data[key];
-    if (!v) return "";
-    if (typeof v === "string") return v;
-    return String(v);
-  };
-
-  const companyName = s("CompanyName");
-  const tradingAs = s("TradingAs");
-  const regNo = s("CompanyRegistrationNumber");
-  const vatNo = s("VATNumber2");
-  const email = s("Email");
-  const phone = s("Phone");
-  const website = s("Website");
-  const address = formatAddress(data["Address"]);
-  const billingContact = formatContact(data["BillingContactPerson"]);
-  const contractContact = formatContact(data["ContractContactPerson"]);
-
-  const extraFields = Object.entries(data).filter(
-    ([k, v]) => !SKIP_KEYS.has(k) && !STRUCTURED_KEYS.has(k) && v !== null && v !== undefined && v !== ""
-  );
-
-  const hasCompany = companyName || tradingAs || regNo || vatNo || email || phone || website;
-  const hasContacts = billingContact || contractContact;
-
-  if (!hasCompany && !address && !hasContacts && extraFields.length === 0) {
-    return <div className="px-5 py-4 text-sm text-oj-muted">No displayable fields in this entry.</div>;
-  }
-
-  return (
-    <div className="divide-y divide-oj-border">
-      {/* Company Details */}
-      {hasCompany && (
-        <div className="px-5 py-4">
-          <p className="text-xs font-bold text-oj-muted uppercase tracking-wide mb-3">Company Details</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {companyName && <CognitoField label="Company Name" value={companyName} />}
-            {tradingAs && <CognitoField label="Trading As" value={tradingAs} />}
-            {regNo && <CognitoField label="Registration Number" value={regNo} />}
-            {vatNo && <CognitoField label="VAT Number" value={vatNo} />}
-            {email && <CognitoField label="Email" value={email} />}
-            {phone && <CognitoField label="Phone" value={phone} />}
-            {website && <CognitoField label="Website" value={website} />}
-          </div>
-        </div>
-      )}
-
-      {/* Address */}
-      {address && (
-        <div className="px-5 py-4">
-          <p className="text-xs font-bold text-oj-muted uppercase tracking-wide mb-2">Physical Address</p>
-          <p className="text-sm text-oj-dark">{address}</p>
-        </div>
-      )}
-
-      {/* Contact Persons */}
-      {hasContacts && (
-        <div className="px-5 py-4">
-          <p className="text-xs font-bold text-oj-muted uppercase tracking-wide mb-3">Contact Persons</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {billingContact && <CognitoField label="Billing Contact" value={billingContact} />}
-            {contractContact && <CognitoField label="Contract Contact" value={contractContact} />}
-          </div>
-        </div>
-      )}
-
-      {/* Additional data — any remaining Cognito fields */}
-      {extraFields.length > 0 && (
-        <div className="px-5 py-4">
-          <p className="text-xs font-bold text-oj-muted uppercase tracking-wide mb-3">Additional Data</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {extraFields.map(([k, v]) => (
-              <CognitoField
-                key={k}
-                label={getDisplayLabel(k)}
-                value={typeof v === "object" ? JSON.stringify(v) : String(v)}
-              />
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );

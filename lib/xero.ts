@@ -1,13 +1,17 @@
 // Xero OAuth 2.0 helpers — server-side only, import only in API routes
 
+import { put, get, del } from "@vercel/blob";
+
 const XERO_AUTH_URL = "https://login.xero.com/identity/connect/authorize";
 const XERO_TOKEN_URL = "https://identity.xero.com/connect/token";
 const XERO_CONNECTIONS_URL = "https://api.xero.com/connections";
 const XERO_API_BASE = "https://api.xero.com/api.xro/2.0";
 const SCOPES = "accounting.contacts offline_access openid profile email";
 const REDIRECT_URI = "https://aria.outerjoin.co.za/api/xero/callback";
-const TOKENS_KEY = "aria:xero_tokens";
-const STATE_PREFIX = "aria:xero_state:";
+
+const TOKENS_KEY = "aria/xero-tokens.json";
+const STATES_KEY = "aria/xero-states.json";
+const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export type XeroTokens = {
   access_token: string;
@@ -16,6 +20,8 @@ export type XeroTokens = {
   tenant_id: string;
   tenant_name: string;
 };
+
+type StateStore = Record<string, number>; // { [state]: createdAt timestamp }
 
 function credentials() {
   const clientId = process.env.XERO_CLIENT_ID;
@@ -29,22 +35,58 @@ function basicAuth(): string {
   return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
 }
 
-// ── State (CSRF) ──────────────────────────────────────────────────────────────
+// ── Blob helpers ─────────────────────────────────────────────────────────────
+
+async function readBlob<T>(key: string): Promise<T | null> {
+  try {
+    const result = await get(key, { access: "public" });
+    if (result && result.statusCode === 200) {
+      const text = await new Response(result.stream).text();
+      return JSON.parse(text) as T;
+    }
+  } catch {
+    // blob doesn't exist
+  }
+  return null;
+}
+
+async function writeBlob(key: string, data: unknown): Promise<void> {
+  await put(key, JSON.stringify(data), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+  });
+}
+
+// ── State (CSRF) ─────────────────────────────────────────────────────────────
 
 export async function saveState(state: string): Promise<void> {
-  const { kv } = await import("@vercel/kv");
-  await kv.set(`${STATE_PREFIX}${state}`, "1", { ex: 600 }); // 10-min TTL
+  const store = (await readBlob<StateStore>(STATES_KEY)) ?? {};
+  // Prune expired states while we're at it
+  const now = Date.now();
+  for (const [k, ts] of Object.entries(store)) {
+    if (now - ts > STATE_TTL_MS) delete store[k];
+  }
+  store[state] = now;
+  await writeBlob(STATES_KEY, store);
 }
 
 export async function verifyAndDeleteState(state: string): Promise<boolean> {
-  const { kv } = await import("@vercel/kv");
-  const val = await kv.get(`${STATE_PREFIX}${state}`);
-  if (!val) return false;
-  await kv.del(`${STATE_PREFIX}${state}`);
+  const store = (await readBlob<StateStore>(STATES_KEY)) ?? {};
+  const ts = store[state];
+  if (ts === undefined) return false;
+  if (Date.now() - ts > STATE_TTL_MS) {
+    delete store[state];
+    await writeBlob(STATES_KEY, store);
+    return false; // expired
+  }
+  delete store[state];
+  await writeBlob(STATES_KEY, store);
   return true;
 }
 
-// ── Auth URL ──────────────────────────────────────────────────────────────────
+// ── Auth URL ─────────────────────────────────────────────────────────────────
 
 export function buildAuthUrl(state: string): string {
   const { clientId } = credentials();
@@ -58,24 +100,26 @@ export function buildAuthUrl(state: string): string {
   return `${XERO_AUTH_URL}?${params.toString()}`;
 }
 
-// ── Token storage ─────────────────────────────────────────────────────────────
+// ── Token storage ────────────────────────────────────────────────────────────
 
 async function saveTokens(tokens: XeroTokens): Promise<void> {
-  const { kv } = await import("@vercel/kv");
-  await kv.set(TOKENS_KEY, tokens);
+  await writeBlob(TOKENS_KEY, tokens);
 }
 
 export async function getTokens(): Promise<XeroTokens | null> {
-  const { kv } = await import("@vercel/kv");
-  return kv.get<XeroTokens>(TOKENS_KEY);
+  return readBlob<XeroTokens>(TOKENS_KEY);
 }
 
 export async function clearTokens(): Promise<void> {
-  const { kv } = await import("@vercel/kv");
-  await kv.del(TOKENS_KEY);
+  try {
+    const result = await get(TOKENS_KEY, { access: "public" });
+    if (result) await del(result.blob.url);
+  } catch {
+    // already gone
+  }
 }
 
-// ── Token exchange & refresh ──────────────────────────────────────────────────
+// ── Token exchange & refresh ─────────────────────────────────────────────────
 
 export async function exchangeCode(code: string): Promise<XeroTokens> {
   const res = await fetch(XERO_TOKEN_URL, {
@@ -146,7 +190,7 @@ export async function getValidTokens(): Promise<XeroTokens> {
   return tokens;
 }
 
-// ── API helpers ───────────────────────────────────────────────────────────────
+// ── API helpers ──────────────────────────────────────────────────────────────
 
 async function xeroFetch(
   method: "GET" | "POST" | "PUT",
@@ -175,7 +219,7 @@ export const xeroGet = (path: string) => xeroFetch("GET", path);
 export const xeroPost = (path: string, body: unknown) => xeroFetch("POST", path, body);
 export const xeroPut = (path: string, body: unknown) => xeroFetch("PUT", path, body);
 
-// ── Cognito → Xero contact mapping ───────────────────────────────────────────
+// ── Cognito → Xero contact mapping ──────────────────────────────────────────
 
 type CognitoAddress = {
   Line1?: string;

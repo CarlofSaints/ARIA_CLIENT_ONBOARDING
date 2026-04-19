@@ -115,15 +115,14 @@ async function createTeamsStructure(clientId: string) {
     warnings.push(`EXTERNAL channel creation failed: ${extRes.status} ${extText}`.slice(0, 250));
   }
 
-  // --- 5. Create INTERNAL channel (private) ---
-  // App-only tokens only support one member at channel creation; add remaining after
+  // --- 5. Create INTERNAL channel (standard) ---
+  // Standard channels do not support members at creation time — all team members have access automatically
   const intRes = await graph(token, `/teams/${teamId}/channels`, {
     method: "POST",
     body: JSON.stringify({
       displayName: `${client.name} - PRIVATE`,
       membershipType: "standard",
       description: "Internal operations channel (set to private manually after creation)",
-      members: [ownerMembers[0]],
     }),
   });
   const intText = await intRes.text();
@@ -131,18 +130,6 @@ async function createTeamsStructure(clientId: string) {
   try { if (intRes.ok) intChannelId = JSON.parse(intText)?.id; } catch {}
   if (!intChannelId) {
     warnings.push(`INTERNAL channel creation failed: ${intRes.status} ${intText}`.slice(0, 250));
-  } else {
-    // Add remaining owners to the private channel
-    for (const member of ownerMembers.slice(1)) {
-      try {
-        await graph(token, `/teams/${teamId}/channels/${intChannelId}/members`, {
-          method: "POST",
-          body: JSON.stringify(member),
-        });
-      } catch (e) {
-        console.warn("Could not add member to INTERNAL channel (non-fatal):", e);
-      }
-    }
   }
 
   // --- 6. Planner: create plan + buckets + tab on EXTERNAL ---

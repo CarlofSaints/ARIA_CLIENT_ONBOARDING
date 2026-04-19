@@ -1,10 +1,15 @@
 import fs from "fs";
 import path from "path";
+import { put, get, del } from "@vercel/blob";
 
 const dataDir = path.join(process.cwd(), "data");
 
-// Use Vercel KV in production, filesystem in local dev
-const useKV = !!process.env.KV_REST_API_URL;
+// Use Vercel Blob in production, filesystem in local dev
+const useBlob = !!process.env.VERCEL;
+
+function blobKey(filename: string): string {
+  return `aria/${filename}`;
+}
 
 function readJsonSync<T>(filename: string): T {
   return JSON.parse(fs.readFileSync(path.join(dataDir, filename), "utf-8")) as T;
@@ -14,27 +19,51 @@ function writeJsonSync(filename: string, data: unknown): void {
   fs.writeFileSync(path.join(dataDir, filename), JSON.stringify(data, null, 2), "utf-8");
 }
 
+/**
+ * Read JSON data from Vercel Blob (production) or local file (dev).
+ * NO module-level cache — multi-container serverless safety.
+ */
 async function readData<T>(filename: string): Promise<T> {
-  if (!useKV) return readJsonSync<T>(filename);
+  if (!useBlob) return readJsonSync<T>(filename);
 
-  const { kv } = await import("@vercel/kv");
-  const key = `aria:${filename.replace(".json", "")}`;
-  const cached = await kv.get<T>(key);
-  if (cached !== null && cached !== undefined) return cached;
+  try {
+    const result = await get(blobKey(filename), { access: "public" });
+    if (result && result.statusCode === 200) {
+      const text = await new Response(result.stream).text();
+      return JSON.parse(text) as T;
+    }
+  } catch (err) {
+    console.error(`[dataStore] Blob read failed for ${filename}:`, err instanceof Error ? err.message : err);
+  }
 
-  // First run on this deployment: seed from bundled JSON file
-  const data = readJsonSync<T>(filename);
-  await kv.set(key, data);
-  return data;
+  // Fallback: seed from bundled JSON if blob doesn't exist yet
+  try {
+    const data = readJsonSync<T>(filename);
+    await writeData(filename, data);
+    return data;
+  } catch {
+    // If no bundled file either, return sensible empty defaults
+    return (Array.isArray([] as unknown) ? [] : {}) as T;
+  }
 }
 
 async function writeData(filename: string, data: unknown): Promise<void> {
-  if (!useKV) {
+  if (!useBlob) {
     writeJsonSync(filename, data);
     return;
   }
-  const { kv } = await import("@vercel/kv");
-  await kv.set(`aria:${filename.replace(".json", "")}`, data);
+
+  try {
+    await put(blobKey(filename), JSON.stringify(data, null, 2), {
+      access: "public",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      contentType: "application/json",
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to persist ${filename} to Vercel Blob: ${msg}`);
+  }
 }
 
 // --- Types ---
@@ -175,21 +204,7 @@ export async function getCams(): Promise<CAM[]> { return readData<CAM[]>("cams.j
 export async function saveCams(cams: CAM[]): Promise<void> { return writeData("cams.json", cams); }
 
 // --- Channels ---
-export async function getChannels(): Promise<Channel[]> {
-  const channels = await readData<Channel[]>("channels.json");
-  // KV may have been seeded before logoFileName was added — merge from bundled JSON
-  if (useKV) {
-    const bundled = readJsonSync<Channel[]>("channels.json");
-    const logoMap = new Map(bundled.map((c) => [c.id, c.logoFileName]));
-    let dirty = false;
-    for (const ch of channels) {
-      const logo = logoMap.get(ch.id);
-      if (!ch.logoFileName && logo) { ch.logoFileName = logo; dirty = true; }
-    }
-    if (dirty) await writeData("channels.json", channels);
-  }
-  return channels;
-}
+export async function getChannels(): Promise<Channel[]> { return readData<Channel[]>("channels.json"); }
 export async function saveChannels(channels: Channel[]): Promise<void> { return writeData("channels.json", channels); }
 
 // --- Permissions ---
@@ -215,7 +230,7 @@ export async function saveChecklistItems(items: ChecklistItemDef[]): Promise<voi
 export async function getPersonnelConfig(): Promise<PersonnelConfig> { return readData<PersonnelConfig>("personnelConfig.json"); }
 export async function savePersonnelConfig(c: PersonnelConfig): Promise<void> { return writeData("personnelConfig.json", c); }
 
-// --- NDA Template (stored in KV only — not a JSON file) ---
+// --- NDA Template ---
 export type NdaTemplate = {
   fileName: string;
   base64: string; // raw base64, no data URL prefix
@@ -223,33 +238,49 @@ export type NdaTemplate = {
 };
 
 export async function getNdaTemplate(): Promise<NdaTemplate | null> {
-  if (!useKV) {
-    // Local dev: read from data/nda-template.json if exists
+  if (!useBlob) {
     const filePath = path.join(dataDir, "nda-template.json");
-    if (!require("fs").existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) return null;
     return readJsonSync<NdaTemplate>("nda-template.json");
   }
-  const { kv } = await import("@vercel/kv");
-  return kv.get<NdaTemplate>("aria:nda_template");
+
+  try {
+    const result = await get(blobKey("nda-template.json"), { access: "public" });
+    if (result && result.statusCode === 200) {
+      const text = await new Response(result.stream).text();
+      return JSON.parse(text) as NdaTemplate;
+    }
+  } catch {
+    // blob doesn't exist yet
+  }
+  return null;
 }
 
 export async function saveNdaTemplate(t: NdaTemplate): Promise<void> {
-  if (!useKV) {
+  if (!useBlob) {
     writeJsonSync("nda-template.json", t);
     return;
   }
-  const { kv } = await import("@vercel/kv");
-  await kv.set("aria:nda_template", t);
+  await put(blobKey("nda-template.json"), JSON.stringify(t), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+  });
 }
 
 export async function deleteNdaTemplate(): Promise<void> {
-  if (!useKV) {
+  if (!useBlob) {
     const filePath = path.join(dataDir, "nda-template.json");
-    if (require("fs").existsSync(filePath)) require("fs").unlinkSync(filePath);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     return;
   }
-  const { kv } = await import("@vercel/kv");
-  await kv.del("aria:nda_template");
+  try {
+    const result = await get(blobKey("nda-template.json"), { access: "public" });
+    if (result) await del(result.blob.url);
+  } catch {
+    // already gone
+  }
 }
 
 // --- Activity Log ---

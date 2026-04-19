@@ -1,1 +1,499 @@
-[]
+[
+  {
+    "id": "b4443a19-fcb8-4001-8727-3c01799080de",
+    "timestamp": "2026-03-17T12:55:46.534Z",
+    "action": "client.deleted",
+    "clientId": "client-c38ac2b5-70b7-486c-b01c-618f2fa4ead5",
+    "clientName": "EMAILTEST222",
+    "details": "Client permanently deleted.",
+    "success": true
+  },
+  {
+    "id": "299fbd50-04cb-4c7b-8927-f49378b5ab1a",
+    "timestamp": "2026-03-17T12:53:05.340Z",
+    "action": "checklist.toggle",
+    "clientId": "client-79a98660-6f14-47fb-b4d9-4c5406d1fdc7",
+    "clientName": "TEST2",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "\"Client WhatsApp group created\" checked.",
+    "success": true
+  },
+  {
+    "id": "76d46e08-5785-4661-a148-1f49c3bb3fab",
+    "timestamp": "2026-03-17T12:51:07.708Z",
+    "action": "teams.created",
+    "clientId": "client-74bb6b96-02c8-404d-8153-1149ec670933",
+    "clientName": "Olivia's Fish cakes",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Teams structure (team, channels, Planner, Action List) created successfully.",
+    "success": true
+  },
+  {
+    "id": "69fc7835-e8c8-4a89-acbf-b09027913880",
+    "timestamp": "2026-03-17T12:50:39.263Z",
+    "action": "sharepoint.created",
+    "clientId": "client-74bb6b96-02c8-404d-8153-1149ec670933",
+    "clientName": "Olivia's Fish cakes",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "SharePoint folder structure created at OLIVIA'S FISH CAKES/ARIA.",
+    "success": true
+  },
+  {
+    "id": "57f3c4c2-e476-47d6-af71-acb563444b3b",
+    "timestamp": "2026-03-17T12:50:13.757Z",
+    "action": "email.cam-notification",
+    "clientId": "client-74bb6b96-02c8-404d-8153-1149ec670933",
+    "clientName": "Olivia's Fish cakes",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "CAM notification sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "d7f5743b-3ca8-4d8d-890a-1c144ff54ba5",
+    "timestamp": "2026-03-17T12:50:13.671Z",
+    "action": "email.welcome",
+    "clientId": "client-74bb6b96-02c8-404d-8153-1149ec670933",
+    "clientName": "Olivia's Fish cakes",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to olivia@anewoutcome.co.za.",
+    "success": true
+  },
+  {
+    "id": "361b7d87-d3a5-405c-befa-04bf1e123432",
+    "timestamp": "2026-03-17T12:50:13.405Z",
+    "action": "checklist.toggle",
+    "clientId": "client-74bb6b96-02c8-404d-8153-1149ec670933",
+    "clientName": "Olivia's Fish cakes",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "7196f398-a648-48a4-80fa-bd1b42c5a6e4",
+    "timestamp": "2026-03-17T12:50:13.395Z",
+    "action": "client.created",
+    "clientId": "client-74bb6b96-02c8-404d-8153-1149ec670933",
+    "clientName": "Olivia's Fish cakes",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"Olivia's Fish cakes\" created. Contact: Olivia Munn.",
+    "success": true
+  },
+  {
+    "id": "51d15700-542f-49f6-a129-12f68ebb9d4c",
+    "timestamp": "2026-03-13T12:11:08.014Z",
+    "action": "email.cam-notification",
+    "clientId": "client-e20d5184-a10a-4b69-89f4-a5e5c2345d1b",
+    "clientName": "Maybe's IceCream",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "CAM notification sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "4639afde-e50b-4437-b4f6-1ef25fdedf35",
+    "timestamp": "2026-03-13T12:11:07.907Z",
+    "action": "email.welcome",
+    "clientId": "client-e20d5184-a10a-4b69-89f4-a5e5c2345d1b",
+    "clientName": "Maybe's IceCream",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "2e72d05d-b41b-4afa-9fce-ddaca55a325e",
+    "timestamp": "2026-03-13T12:11:07.680Z",
+    "action": "checklist.toggle",
+    "clientId": "client-e20d5184-a10a-4b69-89f4-a5e5c2345d1b",
+    "clientName": "Maybe's IceCream",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "db694db2-8e77-415b-be75-7416c5fb4fe6",
+    "timestamp": "2026-03-13T12:11:07.672Z",
+    "action": "client.created",
+    "clientId": "client-e20d5184-a10a-4b69-89f4-a5e5c2345d1b",
+    "clientName": "Maybe's IceCream",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"Maybe's IceCream\" created. Contact: Sipumla Siphati.",
+    "success": true
+  },
+  {
+    "id": "ad6bdf67-8eb5-492a-bd33-9071fcccc319",
+    "timestamp": "2026-03-09T10:04:34.099Z",
+    "action": "personnel.invite_sent",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form invite email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "fccc808c-d012-4557-b255-e1b2f6947add",
+    "timestamp": "2026-03-09T09:45:39.313Z",
+    "action": "personnel.invite_sent",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form invite email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "611fc0b6-1f7c-45e6-a158-fb44f1916716",
+    "timestamp": "2026-03-09T09:15:07.350Z",
+    "action": "personnel.invite_sent",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form invite email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "b5b62cd8-4535-4549-b381-be65d4e425fe",
+    "timestamp": "2026-03-09T09:02:06.314Z",
+    "action": "personnel.invite_sent",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form invite email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "6852bbf0-27d4-4cba-b8d7-e01ba616c8cf",
+    "timestamp": "2026-03-09T08:52:10.872Z",
+    "action": "personnel.edited",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form edited by CAM. 3 people. Updated in SharePoint.",
+    "success": true
+  },
+  {
+    "id": "6db0a08a-1c64-4483-b0d3-002f7acd14f6",
+    "timestamp": "2026-03-09T08:39:16.453Z",
+    "action": "sharepoint.created",
+    "clientId": "client-e3ec2044-812c-4359-a7ff-7974ef96b753",
+    "clientName": "AnotherTEST CO",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "SharePoint folder structure created at ANOTHERTEST CO/ARIA.",
+    "success": true
+  },
+  {
+    "id": "2c6bc1f1-7007-434c-adf4-36356aacaa95",
+    "timestamp": "2026-03-09T08:39:01.777Z",
+    "action": "email.cam-notification",
+    "clientId": "client-e3ec2044-812c-4359-a7ff-7974ef96b753",
+    "clientName": "AnotherTEST CO",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "CAM notification sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "3ab92c4d-86af-43df-8bc8-66d083dbde89",
+    "timestamp": "2026-03-09T08:39:01.693Z",
+    "action": "email.welcome",
+    "clientId": "client-e3ec2044-812c-4359-a7ff-7974ef96b753",
+    "clientName": "AnotherTEST CO",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "7548a91f-8758-4f1c-9499-7f25cbd2de03",
+    "timestamp": "2026-03-09T08:39:01.533Z",
+    "action": "checklist.toggle",
+    "clientId": "client-e3ec2044-812c-4359-a7ff-7974ef96b753",
+    "clientName": "AnotherTEST CO",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "70fa0c5c-ffd9-4bae-94af-222c29e1861d",
+    "timestamp": "2026-03-09T08:39:01.526Z",
+    "action": "client.created",
+    "clientId": "client-e3ec2044-812c-4359-a7ff-7974ef96b753",
+    "clientName": "AnotherTEST CO",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"AnotherTEST CO\" created. Contact: Andile Nomaki.",
+    "success": true
+  },
+  {
+    "id": "95b1fdb4-5fe2-45b8-ab30-af591c6aaaaa",
+    "timestamp": "2026-03-09T08:37:12.076Z",
+    "action": "personnel.edited",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form edited by CAM. 3 people. Updated in SharePoint.",
+    "success": true
+  },
+  {
+    "id": "4c5729fd-727a-4425-83d1-376feff4b724",
+    "timestamp": "2026-03-09T08:35:44.567Z",
+    "action": "client.deleted",
+    "clientId": "client-15b4da47-65c7-46ba-8317-b99efda8b8ed",
+    "clientName": "TEST CLIENT 1",
+    "details": "Client permanently deleted.",
+    "success": true
+  },
+  {
+    "id": "f6f3462c-5697-40df-9075-7c0ed301cb4e",
+    "timestamp": "2026-03-09T07:32:53.944Z",
+    "action": "checklist.toggle",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "userName": "system",
+    "details": "\"Personnel information received\" auto-checked on form submission.",
+    "success": true
+  },
+  {
+    "id": "75f65b28-6718-479f-9133-d8665e7ecd95",
+    "timestamp": "2026-03-09T07:32:53.938Z",
+    "action": "personnel.submitted",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "details": "Personnel form submitted with 2 people. Saved to SharePoint.",
+    "success": true
+  },
+  {
+    "id": "70ba978d-d3e6-4585-a5fe-0e6c9115112b",
+    "timestamp": "2026-03-09T07:30:03.374Z",
+    "action": "sharepoint.created",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "SharePoint folder structure created at ANGEL INVESTMENTS/ARIA.",
+    "success": true
+  },
+  {
+    "id": "d2be7d6c-899c-4055-8412-4327fa2cb6a1",
+    "timestamp": "2026-03-09T07:29:45.240Z",
+    "action": "email.cam-notification",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "CAM notification sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "057f1b1d-a17a-40d6-b6e6-256336b40244",
+    "timestamp": "2026-03-09T07:29:45.129Z",
+    "action": "email.welcome",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "563af5e9-e634-49fc-baef-778420439a82",
+    "timestamp": "2026-03-09T07:29:44.892Z",
+    "action": "checklist.toggle",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "00e4ae8c-8db1-4e09-8b9d-6ff3e44892c1",
+    "timestamp": "2026-03-09T07:29:44.884Z",
+    "action": "client.created",
+    "clientId": "client-0c6f2a8b-0f5e-4bb4-99a0-31c03f83eff1",
+    "clientName": "Angel Investments",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"Angel Investments\" created. Contact: Angelia MOnstrosity.",
+    "success": true
+  },
+  {
+    "id": "5aaab224-a020-44fc-9cfe-4c1241e12f8e",
+    "timestamp": "2026-03-08T14:41:38.790Z",
+    "action": "checklist.toggle",
+    "clientId": "client-15b4da47-65c7-46ba-8317-b99efda8b8ed",
+    "clientName": "TEST CLIENT 1",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "\"Channel mandates received \u2014 Clicks\" unchecked (per-channel update).",
+    "success": true
+  },
+  {
+    "id": "4c4b8908-7c74-4068-a280-b76d99d3c4b8",
+    "timestamp": "2026-03-08T12:30:38.706Z",
+    "action": "xero.contact",
+    "clientId": "client-15b4da47-65c7-46ba-8317-b99efda8b8ed",
+    "clientName": "TEST CLIENT 1",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Xero contact created/updated \u2014 ID: 1f769496-2efa-4f03-b40e-6f465a2d2bb4",
+    "success": true
+  },
+  {
+    "id": "a4621f0b-851b-4f01-b436-0123ea353179",
+    "timestamp": "2026-03-08T12:30:15.166Z",
+    "action": "xero.contact",
+    "clientId": "client-15b4da47-65c7-46ba-8317-b99efda8b8ed",
+    "clientName": "TEST CLIENT 1",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Xero contact created/updated \u2014 ID: 1f769496-2efa-4f03-b40e-6f465a2d2bb4",
+    "success": true
+  },
+  {
+    "id": "f76aa9f8-dcd3-4760-bf7d-6d7749df7632",
+    "timestamp": "2026-03-08T12:30:04.624Z",
+    "action": "cognito.linked",
+    "clientId": "client-15b4da47-65c7-46ba-8317-b99efda8b8ed",
+    "clientName": "TEST CLIENT 1",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Linked Cognito entry #4-82",
+    "success": true
+  },
+  {
+    "id": "61111096-b7da-4fca-ac5b-78674c08fb0d",
+    "timestamp": "2026-03-07T21:11:31.648Z",
+    "action": "email.cam-notification",
+    "clientId": "client-9279cacd-7e8f-4eff-8af1-240048a97337",
+    "clientName": "test444`",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "CAM notification sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "a1cccdcc-2563-4ec1-acda-b9a0798172fa",
+    "timestamp": "2026-03-07T21:11:31.543Z",
+    "action": "email.welcome",
+    "clientId": "client-9279cacd-7e8f-4eff-8af1-240048a97337",
+    "clientName": "test444`",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to carl@outerjoin.co.za.",
+    "success": true
+  },
+  {
+    "id": "75f89278-e0b4-4f0c-89d4-97bb0f6251bf",
+    "timestamp": "2026-03-07T21:11:31.222Z",
+    "action": "checklist.toggle",
+    "clientId": "client-9279cacd-7e8f-4eff-8af1-240048a97337",
+    "clientName": "test444`",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "1fde9389-4a17-47ad-8a94-28b22164a61d",
+    "timestamp": "2026-03-07T21:11:31.200Z",
+    "action": "client.created",
+    "clientId": "client-9279cacd-7e8f-4eff-8af1-240048a97337",
+    "clientName": "test444`",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"test444`\" created. Contact: Mr sweets.",
+    "success": true
+  },
+  {
+    "id": "aa91db03-e72d-49c9-8fce-0b88f91f7052",
+    "timestamp": "2026-03-07T14:40:48.598Z",
+    "action": "email.welcome",
+    "clientId": "client-646840af-019b-4883-9eab-5bbae6150eda",
+    "clientName": "test3332",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to carl@outerjoin.co.za, carl@iram.co.za.",
+    "success": true
+  },
+  {
+    "id": "b6fcb932-b3ec-4437-b541-2acadcb0921c",
+    "timestamp": "2026-03-07T14:40:48.418Z",
+    "action": "checklist.toggle",
+    "clientId": "client-646840af-019b-4883-9eab-5bbae6150eda",
+    "clientName": "test3332",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "82e43444-1964-4db3-b239-58cda37f9a64",
+    "timestamp": "2026-03-07T14:40:48.378Z",
+    "action": "client.created",
+    "clientId": "client-646840af-019b-4883-9eab-5bbae6150eda",
+    "clientName": "test3332",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"test3332\" created. Contact: Testu mctest.",
+    "success": true
+  },
+  {
+    "id": "775992be-ed1d-4248-9eed-26483c81920a",
+    "timestamp": "2026-03-07T11:25:31.706Z",
+    "action": "email.welcome",
+    "clientId": "client-c38ac2b5-70b7-486c-b01c-618f2fa4ead5",
+    "clientName": "EMAILTEST222",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Welcome email sent to carl@outerjoin.co.za, carl@iram.co.za.",
+    "success": true
+  },
+  {
+    "id": "fddbe475-bb3d-46b8-b3d9-2c3ce880dc00",
+    "timestamp": "2026-03-07T11:25:31.463Z",
+    "action": "checklist.toggle",
+    "clientId": "client-c38ac2b5-70b7-486c-b01c-618f2fa4ead5",
+    "clientName": "EMAILTEST222",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "d001034c-9165-4a96-935e-77eeedb9d0e4",
+    "timestamp": "2026-03-07T11:25:31.456Z",
+    "action": "client.created",
+    "clientId": "client-c38ac2b5-70b7-486c-b01c-618f2fa4ead5",
+    "clientName": "EMAILTEST222",
+    "userId": "user-carl",
+    "userName": "Carl dos Santos",
+    "details": "Client \"EMAILTEST222\" created. Contact: Test ickle.",
+    "success": true
+  },
+  {
+    "id": "6d1b7611-7be7-4aee-a3dd-1a4a9d14e337",
+    "timestamp": "2026-03-07T11:08:06.482Z",
+    "action": "email.welcome",
+    "clientId": "client-e991c725-85f8-4db1-8688-db1e13205805",
+    "clientName": "EMAILTEST",
+    "details": "Welcome email sent to carl@iram.co.za.",
+    "success": true
+  },
+  {
+    "id": "3fae8673-22ab-49b9-a23c-1a33f5e5b2fe",
+    "timestamp": "2026-03-07T11:08:06.165Z",
+    "action": "checklist.toggle",
+    "clientId": "client-e991c725-85f8-4db1-8688-db1e13205805",
+    "clientName": "EMAILTEST",
+    "userName": "system",
+    "details": "\"Welcome email sent\" auto-checked on client creation.",
+    "success": true
+  },
+  {
+    "id": "b6a1c8d1-ddbd-4879-be56-832f53bfd40c",
+    "timestamp": "2026-03-07T11:08:06.147Z",
+    "action": "client.created",
+    "clientId": "client-e991c725-85f8-4db1-8688-db1e13205805",
+    "clientName": "EMAILTEST",
+    "details": "Client \"EMAILTEST\" created. Contact: Malcolm X.",
+    "success": true
+  }
+]

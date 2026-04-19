@@ -13,6 +13,10 @@ type ChecklistItem = {
   dynamic: boolean;
   order: number;
   active: boolean;
+  optional?: boolean;
+  step?: number;
+  assignedTo?: "admin" | "cam" | "both";
+  skippable?: boolean;
 };
 
 const SECTIONS = [
@@ -21,6 +25,21 @@ const SECTIONS = [
   { value: "channels", label: "Channels" },
   { value: "technical", label: "Technical Setup" },
   { value: "training", label: "Training & Handover" },
+  { value: "signoff", label: "Client Sign-off" },
+];
+
+const STEPS = [
+  { value: 1, label: "1 — Account Setup" },
+  { value: 2, label: "2 — Client Kickoff" },
+  { value: 3, label: "3 — Infrastructure" },
+  { value: 4, label: "4 — Control Files" },
+  { value: 5, label: "5 — Training & Sign-off" },
+];
+
+const ASSIGNED_TO_OPTIONS = [
+  { value: "both", label: "Both (Admin & CAM)" },
+  { value: "admin", label: "Admin only" },
+  { value: "cam", label: "CAM only" },
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -29,12 +48,21 @@ const TYPE_COLORS: Record<string, string> = {
   either: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
+const ASSIGNED_COLORS: Record<string, string> = {
+  admin: "bg-purple-50 text-purple-700 border-purple-200",
+  cam: "bg-teal-50 text-teal-700 border-teal-200",
+  both: "bg-gray-50 text-gray-600 border-gray-200",
+};
+
 const emptyForm = {
   label: "",
   description: "",
   section: "onboarding",
   type: "manual" as "manual" | "auto" | "either",
   dynamic: false,
+  step: 1,
+  assignedTo: "both" as "admin" | "cam" | "both",
+  skippable: false,
 };
 
 export default function ManageChecklist() {
@@ -94,6 +122,9 @@ export default function ManageChecklist() {
       section: item.section,
       type: item.type,
       dynamic: item.dynamic,
+      step: item.step ?? 1,
+      assignedTo: item.assignedTo ?? "both",
+      skippable: item.skippable ?? false,
     });
   };
 
@@ -117,7 +148,7 @@ export default function ManageChecklist() {
   if (!ready) return null;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div className="max-w-5xl mx-auto px-6 py-10">
       <div className="flex items-center gap-2 text-sm text-oj-muted mb-6">
         <Link href="/admin" className="hover:text-oj-blue">Control Centre</Link>
         <span>/</span>
@@ -128,7 +159,7 @@ export default function ManageChecklist() {
         <div className="text-xs font-bold text-oj-orange tracking-widest mb-1 uppercase">Admin</div>
         <h1 className="text-2xl font-bold text-oj-blue mb-1">Main Onboarding Checklist</h1>
         <p className="text-sm text-oj-muted">
-          Define the checklist items that appear on each client's onboarding progress page. Changes apply to all future and existing clients.
+          Define the checklist items that appear on each client's onboarding progress page. The <strong>Step</strong> and <strong>Assigned To</strong> fields control how items appear in the step-based client journey.
         </p>
       </div>
 
@@ -164,17 +195,42 @@ export default function ManageChecklist() {
             <option value="auto">Auto — system checks automatically</option>
             <option value="either">Either — auto or manual</option>
           </select>
+          <select
+            value={form.step}
+            onChange={(e) => setForm((f) => ({ ...f, step: Number(e.target.value) }))}
+            className="border border-oj-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue bg-white text-oj-dark"
+          >
+            {STEPS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <select
+            value={form.assignedTo}
+            onChange={(e) => setForm((f) => ({ ...f, assignedTo: e.target.value as "admin" | "cam" | "both" }))}
+            className="border border-oj-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue bg-white text-oj-dark"
+          >
+            {ASSIGNED_TO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         </div>
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-oj-dark cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={form.dynamic}
-              onChange={(e) => setForm((f) => ({ ...f, dynamic: e.target.checked }))}
-              className="accent-oj-blue"
-            />
-            Dynamic (one instance per assigned channel)
-          </label>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-oj-dark cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.dynamic}
+                onChange={(e) => setForm((f) => ({ ...f, dynamic: e.target.checked }))}
+                className="accent-oj-blue"
+              />
+              Dynamic (one per channel)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-oj-dark cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.skippable}
+                onChange={(e) => setForm((f) => ({ ...f, skippable: e.target.checked }))}
+                className="accent-oj-blue"
+              />
+              Skippable (doesn&apos;t block step advance)
+            </label>
+          </div>
           <button type="submit" disabled={saving}
             className="bg-oj-blue text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-50">
             Add Item
@@ -193,16 +249,26 @@ export default function ManageChecklist() {
                 <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">{sec.label}</span>
               </div>
               <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-oj-border">
+                    <th className="text-left px-4 py-2 text-xs font-bold text-oj-muted w-8">#</th>
+                    <th className="text-left px-4 py-2 text-xs font-bold text-oj-muted">Item</th>
+                    <th className="text-left px-4 py-2 text-xs font-bold text-oj-muted w-24">Type</th>
+                    <th className="text-left px-4 py-2 text-xs font-bold text-oj-muted w-32">Step</th>
+                    <th className="text-left px-4 py-2 text-xs font-bold text-oj-muted w-28">Assigned To</th>
+                    <th className="px-4 py-2 w-36"></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {sec.items.map((item, i) =>
                     editId === item.id ? (
                       <tr key={item.id} className={`border-b border-oj-border ${i % 2 === 1 ? "bg-oj-bg/40" : ""}`}>
-                        <td className="px-4 py-3" colSpan={4}>
-                          <div className="grid grid-cols-2 gap-2 mb-2">
+                        <td className="px-4 py-3" colSpan={6}>
+                          <div className="grid grid-cols-3 gap-2 mb-2">
                             <input value={editForm.label} onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
-                              className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue col-span-2" placeholder="Label" />
+                              className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue col-span-3" placeholder="Label" />
                             <input value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                              className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue col-span-2" placeholder="Description" />
+                              className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue col-span-3" placeholder="Description" />
                             <select value={editForm.section} onChange={(e) => setEditForm((f) => ({ ...f, section: e.target.value }))}
                               className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue bg-white">
                               {SECTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -213,12 +279,26 @@ export default function ManageChecklist() {
                               <option value="auto">Auto</option>
                               <option value="either">Either</option>
                             </select>
+                            <select value={editForm.step} onChange={(e) => setEditForm((f) => ({ ...f, step: Number(e.target.value) }))}
+                              className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue bg-white">
+                              {STEPS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                            <select value={editForm.assignedTo} onChange={(e) => setEditForm((f) => ({ ...f, assignedTo: e.target.value as "admin" | "cam" | "both" }))}
+                              className="border border-oj-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue bg-white col-span-2">
+                              {ASSIGNED_TO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
                           </div>
                           <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2 text-sm text-oj-dark cursor-pointer select-none">
-                              <input type="checkbox" checked={editForm.dynamic} onChange={(e) => setEditForm((f) => ({ ...f, dynamic: e.target.checked }))} className="accent-oj-blue" />
-                              Dynamic (per channel)
-                            </label>
+                            <div className="flex items-center gap-4">
+                              <label className="flex items-center gap-2 text-sm text-oj-dark cursor-pointer select-none">
+                                <input type="checkbox" checked={editForm.dynamic} onChange={(e) => setEditForm((f) => ({ ...f, dynamic: e.target.checked }))} className="accent-oj-blue" />
+                                Dynamic (per channel)
+                              </label>
+                              <label className="flex items-center gap-2 text-sm text-oj-dark cursor-pointer select-none">
+                                <input type="checkbox" checked={editForm.skippable} onChange={(e) => setEditForm((f) => ({ ...f, skippable: e.target.checked }))} className="accent-oj-blue" />
+                                Skippable
+                              </label>
+                            </div>
                             <div className="flex gap-2">
                               <button onClick={() => handleSaveEdit(item.id)} disabled={saving} className="text-xs font-semibold text-oj-blue hover:text-oj-blue-hover">Save</button>
                               <button onClick={() => setEditId(null)} className="text-xs text-oj-muted hover:text-oj-dark">Cancel</button>
@@ -228,18 +308,32 @@ export default function ManageChecklist() {
                       </tr>
                     ) : (
                       <tr key={item.id} className={`border-b border-oj-border last:border-0 ${i % 2 === 1 ? "bg-oj-bg/40" : ""} ${!item.active ? "opacity-40" : ""}`}>
-                        <td className="px-4 py-3 w-8 text-oj-muted text-xs">{item.order}</td>
-                        <td className="px-4 py-3 flex-1">
+                        <td className="px-4 py-3 text-oj-muted text-xs">{item.order}</td>
+                        <td className="px-4 py-3">
                           <div className="font-medium text-oj-dark text-sm">{item.label}</div>
                           {item.description && <div className="text-xs text-oj-muted mt-0.5">{item.description}</div>}
-                          {item.dynamic && <span className="text-xs text-purple-600 font-medium">per-channel</span>}
+                          <div className="flex gap-1.5 mt-1 flex-wrap">
+                            {item.dynamic && <span className="text-xs text-purple-600 font-medium bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">per-channel</span>}
+                            {item.optional && <span className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">optional</span>}
+                            {(item.skippable ?? false) && <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">skippable</span>}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 w-28">
+                        <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${TYPE_COLORS[item.type]}`}>
                             {item.type}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right w-36">
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-oj-muted font-medium">
+                            Step {item.step ?? 1}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${ASSIGNED_COLORS[item.assignedTo ?? "both"]}`}>
+                            {item.assignedTo ?? "both"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
                           <div className="flex gap-3 justify-end">
                             <button onClick={() => startEdit(item)} className="text-xs font-semibold text-oj-blue hover:text-oj-blue-hover">Edit</button>
                             <button onClick={() => handleToggleActive(item)} className="text-xs font-semibold text-oj-muted hover:text-oj-dark">

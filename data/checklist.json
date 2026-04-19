@@ -7,7 +7,10 @@
     "type": "auto",
     "dynamic": false,
     "order": 1,
-    "active": true
+    "active": true,
+    "step": 1,
+    "assignedTo": "both",
+    "skippable": true
   },
   {
     "id": "cl-cognito-form",
@@ -17,27 +20,10 @@
     "type": "auto",
     "dynamic": false,
     "order": 2,
-    "active": true
-  },
-  {
-    "id": "cl-personnel-info",
-    "label": "Personnel information returned by client",
-    "description": "Auto-detected when client submits the personnel collection form",
-    "section": "onboarding",
-    "type": "auto",
-    "dynamic": false,
-    "order": 3,
-    "active": true
-  },
-  {
-    "id": "cl-whatsapp-group",
-    "label": "Client WhatsApp group created",
-    "description": "CAM creates and adds all relevant parties to the group",
-    "section": "onboarding",
-    "type": "either",
-    "dynamic": false,
-    "order": 4,
-    "active": true
+    "active": true,
+    "step": 1,
+    "assignedTo": "both",
+    "skippable": true
   },
   {
     "id": "cl-nda-sent",
@@ -47,7 +33,10 @@
     "type": "auto",
     "dynamic": false,
     "order": 5,
-    "active": true
+    "active": true,
+    "step": 1,
+    "assignedTo": "admin",
+    "skippable": true
   },
   {
     "id": "cl-nda-signed",
@@ -57,7 +46,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 6,
-    "active": true
+    "active": true,
+    "step": 1,
+    "assignedTo": "admin",
+    "skippable": false
   },
   {
     "id": "cl-sla-sent",
@@ -67,7 +59,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 7,
-    "active": true
+    "active": true,
+    "step": 1,
+    "assignedTo": "admin",
+    "skippable": true
   },
   {
     "id": "cl-sla-signed",
@@ -77,7 +72,36 @@
     "type": "manual",
     "dynamic": false,
     "order": 8,
-    "active": true
+    "active": true,
+    "step": 1,
+    "assignedTo": "admin",
+    "skippable": false
+  },
+  {
+    "id": "cl-personnel-info",
+    "label": "Personnel information returned by client",
+    "description": "Auto-detected when client submits the personnel collection form",
+    "section": "onboarding",
+    "type": "auto",
+    "dynamic": false,
+    "order": 3,
+    "active": true,
+    "step": 2,
+    "assignedTo": "cam",
+    "skippable": false
+  },
+  {
+    "id": "cl-whatsapp-group",
+    "label": "Client WhatsApp group created",
+    "description": "CAM creates and adds all relevant parties to the group",
+    "section": "onboarding",
+    "type": "either",
+    "dynamic": false,
+    "order": 4,
+    "active": true,
+    "step": 2,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-channel-emails",
@@ -87,7 +111,10 @@
     "type": "auto",
     "dynamic": true,
     "order": 9,
-    "active": true
+    "active": true,
+    "step": 2,
+    "assignedTo": "both",
+    "skippable": true
   },
   {
     "id": "cl-channel-mandates",
@@ -97,7 +124,10 @@
     "type": "manual",
     "dynamic": true,
     "order": 10,
-    "active": true
+    "active": true,
+    "step": 2,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-sharepoint",
@@ -107,7 +137,10 @@
     "type": "auto",
     "dynamic": false,
     "order": 11,
-    "active": true
+    "active": true,
+    "step": 3,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-ctrl-links",
@@ -117,7 +150,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 12,
-    "active": true
+    "active": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-ctrl-product",
@@ -127,7 +163,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 13,
-    "active": true
+    "active": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-ctrl-ranging",
@@ -137,7 +176,10 @@
     "type": "manual",
     "dynamic": true,
     "order": 14,
-    "active": true
+    "active": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-ctrl-promo",
@@ -148,7 +190,10 @@
     "dynamic": true,
     "order": 15,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-ctrl-tags",
@@ -159,7 +204,10 @@
     "dynamic": true,
     "order": 16,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-aria-lite-addin",
@@ -170,7 +218,10 @@
     "dynamic": false,
     "order": 17,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-aria-lite-shared",
@@ -181,7 +232,10 @@
     "dynamic": false,
     "order": 18,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-pbi-accounts",
@@ -192,7 +246,10 @@
     "dynamic": false,
     "order": 19,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 4,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-training",
@@ -202,7 +259,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 20,
-    "active": true
+    "active": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-report-workshop",
@@ -212,7 +272,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 21,
-    "active": true
+    "active": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-monthly-meetings",
@@ -222,7 +285,10 @@
     "type": "manual",
     "dynamic": false,
     "order": 22,
-    "active": true
+    "active": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-signoff-pmf",
@@ -232,7 +298,10 @@
     "type": "either",
     "dynamic": false,
     "order": 23,
-    "active": true
+    "active": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-signoff-links",
@@ -242,7 +311,10 @@
     "type": "either",
     "dynamic": false,
     "order": 24,
-    "active": true
+    "active": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": false
   },
   {
     "id": "cl-signoff-tags",
@@ -253,7 +325,10 @@
     "dynamic": true,
     "order": 25,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-signoff-promo",
@@ -264,7 +339,10 @@
     "dynamic": true,
     "order": 26,
     "active": true,
-    "optional": true
+    "optional": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": true
   },
   {
     "id": "cl-signoff-ranging",
@@ -274,6 +352,9 @@
     "type": "either",
     "dynamic": true,
     "order": 27,
-    "active": true
+    "active": true,
+    "step": 5,
+    "assignedTo": "cam",
+    "skippable": false
   }
 ]

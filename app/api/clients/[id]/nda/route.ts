@@ -38,15 +38,23 @@ export async function POST(
     address: formatAddress(addr),
   };
 
-  // Fill placeholders using docxtemplater
+  // Fill placeholders using direct XML manipulation
+  // (docxtemplater fails when {{ and }} are split across separate XML runs, which Word often does)
   let filledBuffer: Buffer;
   try {
     const PizZip = (await import("pizzip")).default;
-    const Docxtemplater = (await import("docxtemplater")).default;
     const zip = new PizZip(Buffer.from(template.base64, "base64"));
-    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-    doc.render(variables);
-    filledBuffer = Buffer.from(doc.getZip().generate({ type: "nodebuffer" }));
+    const escXml = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    let xmlContent = zip.file("word/document.xml")?.asText() ?? "";
+    xmlContent = xmlContent
+      .replace(/<w:t(?:[^>]*)>CLIENT NAME<\/w:t>/g, `<w:t>${escXml(variables.clientName)}</w:t>`)
+      .replace(/<w:t(?:[^>]*)>Client Company Registration Number<\/w:t>/g, `<w:t>${escXml(variables.regNumber)}</w:t>`)
+      .replace(/<w:t(?:[^>]*)>Client Address<\/w:t>/g, `<w:t>${escXml(variables.address)}</w:t>`)
+      .replace(/<w:t(?:[^>]*)>\{\{<\/w:t>/g, "<w:t></w:t>")
+      .replace(/<w:t(?:[^>]*)>\}\}<\/w:t>/g, "<w:t></w:t>");
+    zip.file("word/document.xml", xmlContent);
+    filledBuffer = Buffer.from(zip.generate({ type: "nodebuffer" }));
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: `Template error: ${msg}` }, { status: 500 });
