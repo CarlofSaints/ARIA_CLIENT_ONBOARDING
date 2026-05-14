@@ -172,6 +172,7 @@ export type Client = {
   logoBase64?: string;
   website?: string;
   camId: string;
+  camEmail?: string;
   emails: string[];
   startDate: string;
   channelIds: string[];

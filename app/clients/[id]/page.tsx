@@ -10,7 +10,7 @@ import PersonnelEmailModal from "@/components/PersonnelEmailModal";
 import CognitoLinkModal from "@/components/CognitoLinkModal";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 import ControlFileSignOffModal from "@/components/ControlFileSignOffModal";
-import StepProgressBar from "@/components/StepProgressBar";
+import StepProgressBar, { STEP_LABELS } from "@/components/StepProgressBar";
 import Step1AccountSetup from "@/components/steps/Step1AccountSetup";
 import Step2ClientKickoff from "@/components/steps/Step2ClientKickoff";
 import Step3Infrastructure from "@/components/steps/Step3Infrastructure";
@@ -88,6 +88,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [ndaSent, setNdaSent] = useState(false);
   const [ndaError, setNdaError] = useState("");
   const [signOffModalOpen, setSignOffModalOpen] = useState(false);
+  const [skipWarning, setSkipWarning] = useState<{ targetStep: number; incompleteSteps: string[] } | null>(null);
 
   // Derive isAdmin from session permissions/role
   const typedSession = session as Session;
@@ -111,6 +112,64 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setChecklist(found?.checklist ?? {});
     return found ?? null;
   };
+
+  // Check which steps before `targetStep` are incomplete
+  function getIncompleteStepsBefore(targetStep: number): string[] {
+    if (!client) return [];
+    const incomplete: string[] = [];
+    for (let s = 1; s < targetStep; s++) {
+      const stepDefs = defs.filter(
+        (d) => d.active && !d.optional && (d.step ?? 1) === s
+      );
+      if (stepDefs.length === 0) continue;
+      const allDone = stepDefs.every((def) => {
+        const state = checklist[def.id];
+        if (def.dynamic) {
+          if (!state?.channelStates || client.channelIds.length === 0) return client.channelIds.length === 0;
+          return client.channelIds.every((cId) => state.channelStates![cId]?.completed);
+        }
+        return state?.completed;
+      });
+      if (!allDone) incomplete.push(STEP_LABELS[s - 1]);
+    }
+    return incomplete;
+  }
+
+  // Navigate to a step, showing a warning if skipping ahead past incomplete steps
+  function navigateToStep(targetStep: number) {
+    // Going backwards or staying — always allow without warning
+    if (targetStep <= currentStep) {
+      setCurrentStep(targetStep);
+      return;
+    }
+    const incomplete = getIncompleteStepsBefore(targetStep);
+    if (incomplete.length > 0) {
+      setSkipWarning({ targetStep, incompleteSteps: incomplete });
+    } else {
+      setCurrentStep(targetStep);
+    }
+  }
+
+  // Confirm skip: log it and navigate
+  async function confirmSkip() {
+    if (!skipWarning || !client) return;
+    const { targetStep, incompleteSteps } = skipWarning;
+    // Log the out-of-order navigation
+    fetch("/api/logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "step.skipped",
+        clientId: client.id,
+        clientName: client.name,
+        userId: typedSession?.id,
+        userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined,
+        details: `Skipped to Step ${targetStep} (${STEP_LABELS[targetStep - 1]}) with prior steps incomplete: ${incompleteSteps.join(", ")}.`,
+      }),
+    });
+    setCurrentStep(targetStep);
+    setSkipWarning(null);
+  }
 
   useEffect(() => {
     if (!ready) return;
@@ -368,24 +427,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setSaving(null);
   };
 
-  // Blocking items for current step
-  function getBlockingItems(step: number): string[] {
-    if (!client) return [];
-    const stepDefs = defs.filter(
-      (d) => d.active && !d.optional && !(d.skippable ?? false) && (d.step ?? 1) === step
-    );
-    return stepDefs
-      .filter((def) => {
-        const state = checklist[def.id];
-        if (def.dynamic) {
-          if (!state?.channelStates) return client.channelIds.length > 0;
-          return client.channelIds.some((cId) => !state.channelStates![cId]?.completed);
-        }
-        return !state?.completed;
-      })
-      .map((def) => def.label);
-  }
-
   if (!ready || loading) return null;
   if (!client) {
     return (
@@ -399,8 +440,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const cam = cams.find((c) => c.id === client.camId);
   const clientChannels = channels.filter((ch) => client.channelIds.includes(ch.id));
   const score = computeScore(defs, checklist, client.channelIds);
-  const blockingItems = getBlockingItems(currentStep);
-  const isBlocked = blockingItems.length > 0;
 
   // Common props for all step components
   const commonProps = {
@@ -475,7 +514,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         defs={defs}
         checklist={checklist}
         channelIds={client.channelIds}
-        onStepClick={setCurrentStep}
+        onStepClick={navigateToStep}
       />
 
       {/* Step content */}
@@ -551,22 +590,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         <div className="flex flex-col items-end gap-2">
           {currentStep < STEP_COUNT && (
             <button
-              onClick={() => !isBlocked && setCurrentStep((s) => s + 1)}
-              disabled={isBlocked}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                isBlocked
-                  ? "border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-                  : "bg-teal-600 text-white hover:bg-teal-700"
-              }`}
+              onClick={() => navigateToStep(currentStep + 1)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-teal-600 text-white hover:bg-teal-700"
             >
               Next Step →
             </button>
-          )}
-          {isBlocked && (
-            <p className="text-xs text-red-600 text-right max-w-xs">
-              Complete required items before advancing:{" "}
-              <span className="font-medium">{blockingItems.slice(0, 3).join(", ")}{blockingItems.length > 3 ? ` +${blockingItems.length - 3} more` : ""}</span>
-            </p>
           )}
         </div>
       </div>
@@ -674,6 +702,48 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           session={session}
           onClose={() => setSignOffModalOpen(false)}
         />
+      )}
+
+      {/* Skip-step warning modal */}
+      {skipWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-lg shrink-0">
+                !
+              </div>
+              <h3 className="text-lg font-bold text-oj-dark">Skipping Ahead</h3>
+            </div>
+            <p className="text-sm text-oj-muted mb-3">
+              You&apos;re navigating to <strong className="text-oj-dark">Step {skipWarning.targetStep} ({STEP_LABELS[skipWarning.targetStep - 1]})</strong> but
+              the following prior steps still have outstanding items:
+            </p>
+            <ul className="mb-4 space-y-1">
+              {skipWarning.incompleteSteps.map((name) => (
+                <li key={name} className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                  <span className="text-amber-500">&#x25CF;</span> {name}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-oj-muted mb-5">
+              This will be recorded in the activity log. You can return to complete these steps at any time.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setSkipWarning(null)}
+                className="px-4 py-2 rounded-lg border border-oj-border text-sm font-semibold text-oj-dark hover:bg-oj-bg transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={confirmSkip}
+                className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors"
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

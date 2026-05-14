@@ -4,6 +4,8 @@ import { randomUUID } from "crypto";
 import { sendWelcomeEmail, sendCamNewClientEmail } from "@/lib/email";
 import { addLog } from "@/lib/activityLog";
 
+export const maxDuration = 120;
+
 const COGNITO_FORM_URL = "https://www.cognitoforms.com/outerjoin1/clientbillinginformationoj";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aria-onboarding-two.vercel.app";
 
@@ -13,11 +15,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, logoBase64, website, camId, emails, startDate, channelIds, contactName, userId, userName } = body as {
+  const { name, logoBase64, website, camId, camEmail: camEmailOverride, emails, startDate, channelIds, contactName, userId, userName } = body as {
     name: string;
     logoBase64?: string;
     website?: string;
     camId: string;
+    camEmail?: string;
     emails: string[];
     startDate: string;
     channelIds: string[];
@@ -39,6 +42,7 @@ export async function POST(request: Request) {
     logoBase64,
     website: website?.trim(),
     camId,
+    camEmail: camEmailOverride?.trim() || undefined,
     emails,
     startDate,
     channelIds,
@@ -81,7 +85,7 @@ export async function POST(request: Request) {
   const [cams, allChannels] = await Promise.all([getCams(), getChannels()]);
   const cam = cams.find((c) => c.id === camId);
   const camFullName = cam ? `${cam.name} ${cam.surname}` : "your Account Manager";
-  const camEmail = cam?.email ?? "";
+  const camEmail = newClient.camEmail || cam?.email || "";
   const personnelFormUrl = `${SITE_URL}/personnel/${personnelToken}`;
   const channelNames = channelIds
     .map((id) => allChannels.find((ch) => ch.id === id)?.name)
@@ -164,6 +168,36 @@ export async function POST(request: Request) {
           error: errMsg,
         });
       }
+    }
+
+    // Auto-create SharePoint folder
+    try {
+      const spRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, userName }),
+      });
+      if (!spRes.ok) {
+        const d = await spRes.text();
+        console.error("Auto SharePoint creation failed:", spRes.status, d);
+      }
+    } catch (err) {
+      console.error("Auto SharePoint creation error:", err);
+    }
+
+    // Auto-create Teams structure
+    try {
+      const teamsRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, userName }),
+      });
+      if (!teamsRes.ok) {
+        const d = await teamsRes.text();
+        console.error("Auto Teams creation failed:", teamsRes.status, d);
+      }
+    } catch (err) {
+      console.error("Auto Teams creation error:", err);
     }
   });
 

@@ -11,6 +11,7 @@ type Channel = { id: string; name: string };
 const emptyForm = {
   name: "",
   camId: "",
+  camEmail: "",
   channelIds: [] as string[],
   startDate: "",
   contactName: "",
@@ -90,6 +91,7 @@ export default function NewOnboardingPage() {
           logoBase64: form.logoBase64,
           website: form.website,
           camId: form.camId,
+          camEmail: form.camEmail,
           emails: validEmails,
           startDate: form.startDate,
           channelIds: form.channelIds,
@@ -126,7 +128,7 @@ export default function NewOnboardingPage() {
           The client record has been saved and a welcome email has been sent.
         </p>
         <p className="text-sm text-oj-muted mb-8">
-          Next step: set up the SharePoint folder and Teams structure for this client.
+          SharePoint folders and Teams channels are being created automatically in the background.
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           {createdClientId && (
@@ -134,7 +136,7 @@ export default function NewOnboardingPage() {
               href={`/clients/${createdClientId}`}
               className="bg-oj-blue text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-oj-blue-hover transition-colors"
             >
-              Set Up SharePoint &amp; Teams →
+              View Client →
             </Link>
           )}
           <button
@@ -153,8 +155,6 @@ export default function NewOnboardingPage() {
       </div>
     );
   }
-
-  const selectedCam = cams.find((c) => c.id === form.camId);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
@@ -237,7 +237,10 @@ export default function NewOnboardingPage() {
           </label>
           <select
             required value={form.camId}
-            onChange={(e) => setForm((f) => ({ ...f, camId: e.target.value }))}
+            onChange={(e) => {
+              const cam = cams.find((c) => c.id === e.target.value);
+              setForm((f) => ({ ...f, camId: e.target.value, camEmail: cam?.email ?? "" }));
+            }}
             className="w-full border border-oj-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue bg-white text-oj-dark"
           >
             <option value="">Select a CAM...</option>
@@ -245,15 +248,26 @@ export default function NewOnboardingPage() {
               <option key={c.id} value={c.id}>{c.name} {c.surname}</option>
             ))}
           </select>
-          {selectedCam && (
-            <p className="text-xs text-oj-muted mt-1.5">{selectedCam.email}</p>
-          )}
           {cams.length === 0 && (
             <p className="text-xs text-oj-muted mt-1.5">
               No CAMs configured.{" "}
               <Link href="/admin/cams" className="text-oj-blue underline">Add CAMs in the Control Centre.</Link>
             </p>
           )}
+        </div>
+
+        {/* CAM Email */}
+        <div>
+          <label className="block text-sm font-semibold text-oj-dark mb-1.5">
+            CAM Email Address <span className="text-oj-orange">*</span>
+          </label>
+          <input
+            type="email" required placeholder="cam@outerjoin.co.za"
+            value={form.camEmail}
+            onChange={(e) => setForm((f) => ({ ...f, camEmail: e.target.value }))}
+            className="w-full border border-oj-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-oj-blue placeholder:text-oj-muted"
+          />
+          <p className="text-xs text-oj-muted mt-1">Auto-filled from CAM selection. Edit if needed.</p>
         </div>
 
         {/* Channels */}
