@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { put, get, del, BlobNotFoundError } from "@vercel/blob";
+import { put, list, del } from "@vercel/blob";
 
 const dataDir = path.join(process.cwd(), "data");
 
@@ -22,44 +22,56 @@ function writeJsonSync(filename: string, data: unknown): void {
 /**
  * Read JSON data from Vercel Blob (production) or local file (dev).
  *
- * SAFETY: On blob read failure, we distinguish between "blob doesn't exist"
- * (first-time seed from local file) vs "transient error" (throw — never
- * overwrite production data with empty/stale seed data).
+ * SAFETY RULES:
+ * 1. If the blob exists and we can read it → return data.
+ * 2. If the blob exists but read fails → THROW. Never return stale/empty data.
+ * 3. If the blob does NOT exist → first-time setup, seed from local file or return [].
+ * 4. NEVER write seed data back to blob on error — that's what caused data loss.
  */
 async function readData<T>(filename: string): Promise<T> {
   if (!useBlob) return readJsonSync<T>(filename);
 
+  const key = blobKey(filename);
+
+  // Step 1: Check if blob exists using list()
+  let blobUrl: string | null = null;
   try {
-    const result = await get(blobKey(filename), { access: "public" });
-    if (result && result.statusCode === 200) {
-      const text = await new Response(result.stream).text();
-      return JSON.parse(text) as T;
-    }
-    // Non-200 but not an error — treat as not found
+    const listing = await list({ prefix: key, limit: 1 });
+    const match = listing.blobs.find((b) => b.pathname === key);
+    blobUrl = match?.url ?? null;
   } catch (err) {
-    // Blob genuinely doesn't exist — seed from local file
-    if (err instanceof BlobNotFoundError) {
-      try {
-        const data = readJsonSync<T>(filename);
-        await writeData(filename, data);
-        return data;
-      } catch {
-        return [] as unknown as T;
-      }
-    }
-    // Any other error is transient — DO NOT seed, throw instead
+    // Can't even list — treat as transient, throw
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[dataStore] Blob read failed for ${filename} (transient):`, msg);
-    throw new Error(`Transient blob read error for ${filename}: ${msg}`);
+    console.error(`[dataStore] Blob list failed for ${key}:`, msg);
+    throw new Error(`Cannot list blobs for ${filename}: ${msg}`);
   }
 
-  // Fell through (non-200, no error) — treat as not found, seed
+  // Step 2: Blob doesn't exist → first-time seed
+  if (!blobUrl) {
+    console.log(`[dataStore] Blob ${key} not found, seeding from local file`);
+    try {
+      const data = readJsonSync<T>(filename);
+      await writeData(filename, data);
+      return data;
+    } catch {
+      // No local file either — genuinely empty (first deploy)
+      return [] as unknown as T;
+    }
+  }
+
+  // Step 3: Blob exists → read it. If this fails, THROW. Never return empty.
   try {
-    const data = readJsonSync<T>(filename);
-    await writeData(filename, data);
-    return data;
-  } catch {
-    return [] as unknown as T;
+    const res = await fetch(blobUrl);
+    if (!res.ok) {
+      throw new Error(`Blob fetch returned ${res.status} for ${key}`);
+    }
+    const text = await res.text();
+    const parsed = JSON.parse(text) as T;
+    return parsed;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[dataStore] CRITICAL: Blob ${key} exists but read failed:`, msg);
+    throw new Error(`Blob read failed for ${filename} (blob exists, refusing to return empty): ${msg}`);
   }
 }
 
@@ -67,6 +79,12 @@ async function writeData(filename: string, data: unknown): Promise<void> {
   if (!useBlob) {
     writeJsonSync(filename, data);
     return;
+  }
+
+  // SAFETY: Never write an empty clients array
+  if (filename === "clients.json" && Array.isArray(data) && data.length === 0) {
+    console.error("[dataStore] BLOCKED: Attempted to write empty clients array to blob. This would wipe all data.");
+    throw new Error("Refusing to write empty clients array — possible data corruption");
   }
 
   try {
@@ -83,11 +101,8 @@ async function writeData(filename: string, data: unknown): Promise<void> {
 }
 
 /**
- * Atomic single-client update. Reads the latest clients array, applies the
- * updater function to the matching client, and writes back.
- *
- * This is safer than getClients() + saveClients() in concurrent contexts
- * because it minimises the window between read and write.
+ * Update a single client safely. Reads latest data, applies updater, writes back.
+ * Refuses to write if the read returned empty (safety check).
  */
 export async function updateClient(
   clientId: string,
@@ -284,15 +299,17 @@ export async function getNdaTemplate(): Promise<NdaTemplate | null> {
   }
 
   try {
-    const result = await get(blobKey("nda-template.json"), { access: "public" });
-    if (result && result.statusCode === 200) {
-      const text = await new Response(result.stream).text();
-      return JSON.parse(text) as NdaTemplate;
-    }
+    const key = blobKey("nda-template.json");
+    const listing = await list({ prefix: key, limit: 1 });
+    const match = listing.blobs.find((b) => b.pathname === key);
+    if (!match) return null;
+    const res = await fetch(match.url);
+    if (!res.ok) return null;
+    const text = await res.text();
+    return JSON.parse(text) as NdaTemplate;
   } catch {
-    // blob doesn't exist yet
+    return null;
   }
-  return null;
 }
 
 export async function saveNdaTemplate(t: NdaTemplate): Promise<void> {
@@ -315,8 +332,10 @@ export async function deleteNdaTemplate(): Promise<void> {
     return;
   }
   try {
-    const result = await get(blobKey("nda-template.json"), { access: "public" });
-    if (result) await del(result.blob.url);
+    const key = blobKey("nda-template.json");
+    const listing = await list({ prefix: key, limit: 1 });
+    const match = listing.blobs.find((b) => b.pathname === key);
+    if (match) await del(match.url);
   } catch {
     // already gone
   }

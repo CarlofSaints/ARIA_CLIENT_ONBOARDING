@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { sendWelcomeEmail, sendCamNewClientEmail } from "@/lib/email";
 import { addLog } from "@/lib/activityLog";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const COGNITO_FORM_URL = "https://www.cognitoforms.com/outerjoin1/clientbillinginformationoj";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aria-onboarding-two.vercel.app";
@@ -173,43 +173,46 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-create infrastructure in parallel (each is an independent serverless call)
-    const infraPromises: Promise<void>[] = [];
-
+    // Auto-create infrastructure SEQUENTIALLY to prevent blob write races.
+    // Each call reads + writes the clients blob — parallel calls overwrite each other.
     if (createSharePoint !== false) {
-      infraPromises.push(
-        fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
+      try {
+        const r = await fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, userName }),
-        }).then(async (r) => { if (!r.ok) console.error("Auto SharePoint failed:", r.status, await r.text()); })
-          .catch((err) => console.error("Auto SharePoint error:", err))
-      );
+        });
+        if (!r.ok) console.error("Auto SharePoint failed:", r.status, await r.text());
+      } catch (err) {
+        console.error("Auto SharePoint error:", err);
+      }
     }
 
     if (createTeams !== false) {
-      infraPromises.push(
-        fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
+      try {
+        const r = await fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, userName }),
-        }).then(async (r) => { if (!r.ok) console.error("Auto Teams failed:", r.status, await r.text()); })
-          .catch((err) => console.error("Auto Teams error:", err))
-      );
+        });
+        if (!r.ok) console.error("Auto Teams failed:", r.status, await r.text());
+      } catch (err) {
+        console.error("Auto Teams error:", err);
+      }
     }
 
     if (createDropbox !== false) {
-      infraPromises.push(
-        fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
+      try {
+        const r = await fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, userName }),
-        }).then(async (r) => { if (!r.ok) console.error("Auto Dropbox failed:", r.status, await r.text()); })
-          .catch((err) => console.error("Auto Dropbox error:", err))
-      );
+        });
+        if (!r.ok) console.error("Auto Dropbox failed:", r.status, await r.text());
+      } catch (err) {
+        console.error("Auto Dropbox error:", err);
+      }
     }
-
-    await Promise.allSettled(infraPromises);
   });
 
   return NextResponse.json(newClient, { status: 201 });
