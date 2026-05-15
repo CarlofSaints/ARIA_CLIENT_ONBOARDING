@@ -33,6 +33,12 @@ export default function NewOnboardingPage() {
   const [success, setSuccess] = useState(false);
   const [createdClientId, setCreatedClientId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState("");
+  const [infraRequested, setInfraRequested] = useState({ sp: false, teams: false, dropbox: false });
+  const [infraStatus, setInfraStatus] = useState<{
+    sp?: "pending" | "created" | "error";
+    teams?: "pending" | "creating" | "created" | "error";
+    dropbox?: "pending" | "created" | "error";
+  }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,6 +46,33 @@ export default function NewOnboardingPage() {
     fetch("/api/cams").then((r) => r.json()).then(setCams);
     fetch("/api/channels").then((r) => r.json()).then(setChannels);
   }, [ready]);
+
+  // Poll infrastructure status after client creation
+  useEffect(() => {
+    if (!success || !createdClientId) return;
+    const anyPending = infraRequested.sp || infraRequested.teams || infraRequested.dropbox;
+    if (!anyPending) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/clients/${createdClientId}`);
+        if (!res.ok) return;
+        const client = await res.json();
+        const newStatus = {
+          sp: infraRequested.sp ? (client.sharepointStatus ?? "pending") : undefined,
+          teams: infraRequested.teams ? (client.teamsStatus ?? "pending") : undefined,
+          dropbox: infraRequested.dropbox ? (client.dropboxStatus ?? "pending") : undefined,
+        };
+        setInfraStatus(newStatus);
+        // Stop polling when all requested items are resolved
+        const vals = Object.values(newStatus).filter((v) => v !== undefined);
+        const allDone = vals.every((v) => v === "created" || v === "error");
+        if (allDone) clearInterval(interval);
+      } catch { /* ignore polling errors */ }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [success, createdClientId, infraRequested]);
 
   const toggleChannel = (id: string) => {
     setForm((f) => ({
@@ -113,6 +146,12 @@ export default function NewOnboardingPage() {
       }
       const data = await res.json();
       setCreatedClientId(data.id ?? null);
+      setInfraRequested({ sp: form.createSharePoint, teams: form.createTeams, dropbox: form.createDropbox });
+      setInfraStatus({
+        sp: form.createSharePoint ? "pending" : undefined,
+        teams: form.createTeams ? "pending" : undefined,
+        dropbox: form.createDropbox ? "pending" : undefined,
+      });
       setSuccess(true);
     } catch {
       setSubmitError("Network error. Please try again.");
@@ -124,18 +163,55 @@ export default function NewOnboardingPage() {
   if (!ready) return null;
 
   if (success) {
+    const infraItems: { key: string; label: string; status?: string }[] = [];
+    if (infraRequested.sp) infraItems.push({ key: "sp", label: "SharePoint Folders", status: infraStatus.sp });
+    if (infraRequested.teams) infraItems.push({ key: "teams", label: "Teams Channels", status: infraStatus.teams });
+    if (infraRequested.dropbox) infraItems.push({ key: "dropbox", label: "Dropbox Folders", status: infraStatus.dropbox });
+
     return (
       <div className="max-w-2xl mx-auto px-6 py-16 text-center">
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5 text-3xl">
           ✅
         </div>
         <h2 className="text-2xl font-bold text-oj-blue mb-2">Client Created</h2>
-        <p className="text-oj-muted mb-3">
+        <p className="text-oj-muted mb-6">
           The client record has been saved and a welcome email has been sent.
         </p>
-        <p className="text-sm text-oj-muted mb-8">
-          Infrastructure is being set up automatically in the background.
-        </p>
+
+        {infraItems.length > 0 && (
+          <div className="mb-8 max-w-sm mx-auto text-left">
+            <h3 className="text-sm font-semibold text-oj-dark mb-3 text-center">Infrastructure Setup</h3>
+            <div className="space-y-2">
+              {infraItems.map((item) => (
+                <div key={item.key} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border text-sm ${
+                  item.status === "created"
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : item.status === "error"
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : "bg-gray-50 border-gray-200 text-gray-600"
+                }`}>
+                  {item.status === "created" ? (
+                    <span className="text-green-500 text-base shrink-0">&#10003;</span>
+                  ) : item.status === "error" ? (
+                    <span className="text-red-500 text-base shrink-0">&#10007;</span>
+                  ) : (
+                    <span className="animate-spin inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full shrink-0" />
+                  )}
+                  <span className="font-medium">{item.label}</span>
+                  <span className="ml-auto text-xs">
+                    {item.status === "created" ? "Done" : item.status === "error" ? "Failed" : item.status === "creating" ? "In progress..." : "Setting up..."}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {infraItems.some((i) => i.status === "error") && (
+              <p className="text-xs text-red-600 mt-2 text-center">
+                Some items failed. You can retry them on the client&apos;s Infrastructure page.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-3 justify-center flex-wrap">
           {createdClientId && (
             <Link
@@ -146,7 +222,7 @@ export default function NewOnboardingPage() {
             </Link>
           )}
           <button
-            onClick={() => { setSuccess(false); setForm(emptyForm); setCreatedClientId(null); }}
+            onClick={() => { setSuccess(false); setForm(emptyForm); setCreatedClientId(null); setInfraStatus({}); setInfraRequested({ sp: false, teams: false, dropbox: false }); }}
             className="border border-oj-border px-6 py-2.5 rounded-lg text-sm text-oj-dark hover:bg-oj-bg transition-colors"
           >
             Create Another Client

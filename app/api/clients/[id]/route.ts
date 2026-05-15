@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { getClients, saveClients } from "@/lib/dataStore";
 import { addLog } from "@/lib/activityLog";
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const clients = await getClients();
+  const client = clients.find((c) => c.id === id);
+  if (!client) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(client);
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -29,18 +29,48 @@ export async function getDropboxToken(): Promise<string> {
   return data.access_token as string;
 }
 
-/** Raw POST to a Dropbox API endpoint */
-export async function dropbox(
-  token: string,
-  endpoint: string,
-  body: Record<string, unknown>
-): Promise<Response> {
-  return fetch(`https://api.dropboxapi.com/2/${endpoint}`, {
+/**
+ * Get the root namespace ID for a Dropbox Business account.
+ * This is required so that API paths match the web UI paths.
+ */
+export async function getRootNamespaceId(token: string): Promise<string> {
+  const res = await fetch("https://api.dropboxapi.com/2/users/get_current_account", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
     },
+  });
+  const data = await res.json();
+  // Business accounts have root_info.root_namespace_id
+  const nsId = data?.root_info?.root_namespace_id;
+  if (!nsId) {
+    throw new Error(
+      `Could not resolve Dropbox root namespace. root_info: ${JSON.stringify(data?.root_info)}`
+    );
+  }
+  return nsId as string;
+}
+
+/** Raw POST to a Dropbox API endpoint with root namespace header */
+export async function dropbox(
+  token: string,
+  endpoint: string,
+  body: Record<string, unknown>,
+  rootNamespaceId?: string
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+  if (rootNamespaceId) {
+    headers["Dropbox-API-Path-Root"] = JSON.stringify({
+      ".tag": "root",
+      root: rootNamespaceId,
+    });
+  }
+  return fetch(`https://api.dropboxapi.com/2/${endpoint}`, {
+    method: "POST",
+    headers,
     body: JSON.stringify(body),
   });
 }
@@ -49,9 +79,10 @@ export async function dropbox(
 export async function dropboxJson<T = unknown>(
   token: string,
   endpoint: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  rootNamespaceId?: string
 ): Promise<T> {
-  const res = await dropbox(token, endpoint, body);
+  const res = await dropbox(token, endpoint, body, rootNamespaceId);
   const text = await res.text();
   if (!res.ok) {
     throw new Error(`Dropbox ${endpoint} → ${res.status}: ${text}`);

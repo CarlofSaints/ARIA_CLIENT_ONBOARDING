@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getClients, saveClients } from "@/lib/dataStore";
 import {
   getDropboxToken,
+  getRootNamespaceId,
   dropboxJson,
   DROPBOX_BASE_PATH,
   DROPBOX_TEMPLATE_FOLDER,
@@ -50,6 +51,7 @@ export async function POST(
 
   try {
     const token = await getDropboxToken();
+    const rootNs = await getRootNamespaceId(token);
     const clientFolderPath = `${DROPBOX_BASE_PATH}/${client.name}`;
 
     // 1. Create client folder
@@ -58,7 +60,8 @@ export async function POST(
       const folder = await dropboxJson<FolderMetadata>(
         token,
         "files/create_folder_v2",
-        { path: clientFolderPath, autorename: false }
+        { path: clientFolderPath, autorename: false },
+        rootNs
       );
       folderId = folder.metadata.id;
     } catch (err) {
@@ -68,7 +71,8 @@ export async function POST(
         const meta = await dropboxJson<{ id: string }>(
           token,
           "files/get_metadata",
-          { path: clientFolderPath }
+          { path: clientFolderPath },
+          rootNs
         );
         folderId = meta.id;
       } else {
@@ -80,7 +84,8 @@ export async function POST(
     const templates = await dropboxJson<ListFolderResult>(
       token,
       "files/list_folder",
-      { path: DROPBOX_TEMPLATE_FOLDER }
+      { path: DROPBOX_TEMPLATE_FOLDER },
+      rootNs
     );
 
     const fileEntries = templates.entries.filter((e) => e[".tag"] === "file");
@@ -95,7 +100,7 @@ export async function POST(
           from_path: file.path_display || file.path_lower,
           to_path: toPath,
           autorename: false,
-        });
+        }, rootNs);
         copiedCount++;
       } catch (copyErr) {
         const copyMsg = (copyErr as Error).message ?? "";
