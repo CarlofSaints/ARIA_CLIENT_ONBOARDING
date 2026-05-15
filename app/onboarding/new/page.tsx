@@ -48,14 +48,34 @@ export default function NewOnboardingPage() {
   }, [ready]);
 
   // Fire infrastructure calls from the browser after client creation.
-  // The after() server callback was unreliable (self-referencing fetch issues on Vercel).
-  // Running from the client is reliable — same as clicking the buttons on Step 3.
+  const [infraErrors, setInfraErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!success || !createdClientId) return;
     const { sp, teams, dropbox } = infraRequested;
     if (!sp && !teams && !dropbox) return;
 
     let cancelled = false;
+
+    async function callInfra(
+      endpoint: string,
+      key: string,
+      authBody: string,
+      headers: Record<string, string>
+    ): Promise<boolean> {
+      try {
+        const r = await fetch(`/api/clients/${createdClientId}/${endpoint}`, {
+          method: "POST", headers, body: authBody,
+        });
+        if (r.ok) return true;
+        const data = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+        setInfraErrors((e) => ({ ...e, [key]: data.error ?? `Failed (${r.status})` }));
+        return false;
+      } catch (err) {
+        setInfraErrors((e) => ({ ...e, [key]: (err as Error).message ?? "Network error" }));
+        return false;
+      }
+    }
+
     async function runInfra() {
       const authBody = JSON.stringify({
         userId: session?.id,
@@ -63,28 +83,22 @@ export default function NewOnboardingPage() {
       });
       const headers = { "Content-Type": "application/json" };
 
+      // Wait 3 seconds for blob to propagate before first call
+      await new Promise((r) => setTimeout(r, 3000));
+
       // Sequential to avoid blob write races
       if (sp && !cancelled) {
         setInfraStatus((s) => ({ ...s, sp: "pending" }));
-        try {
-          const r = await fetch(`/api/clients/${createdClientId}/sharepoint`, {
-            method: "POST", headers, body: authBody,
-          });
-          setInfraStatus((s) => ({ ...s, sp: r.ok ? "created" : "error" }));
-        } catch {
-          setInfraStatus((s) => ({ ...s, sp: "error" }));
-        }
+        const ok = await callInfra("sharepoint", "sp", authBody, headers);
+        setInfraStatus((s) => ({ ...s, sp: ok ? "created" : "error" }));
       }
 
       if (teams && !cancelled) {
         setInfraStatus((s) => ({ ...s, teams: "creating" }));
-        try {
-          const r = await fetch(`/api/clients/${createdClientId}/teams`, {
-            method: "POST", headers, body: authBody,
-          });
-          if (r.ok) {
-            // Teams uses async creation — poll for completion
-            setInfraStatus((s) => ({ ...s, teams: "creating" }));
+        const ok = await callInfra("teams", "teams", authBody, headers);
+        if (ok) {
+          // Teams uses async creation — poll for completion
+          await new Promise<void>((resolve) => {
             const poll = setInterval(async () => {
               try {
                 const c = await fetch(`/api/clients/${createdClientId}`);
@@ -92,30 +106,26 @@ export default function NewOnboardingPage() {
                 const data = await c.json();
                 if (data.teamsStatus === "created" || data.teamsStatus === "error") {
                   setInfraStatus((s) => ({ ...s, teams: data.teamsStatus }));
+                  if (data.teamsStatus === "error" && data.teamsError) {
+                    setInfraErrors((e) => ({ ...e, teams: data.teamsError }));
+                  }
                   clearInterval(poll);
+                  resolve();
                 }
               } catch { /* ignore */ }
             }, 4000);
-            // Safety: stop polling after 3 minutes
-            setTimeout(() => clearInterval(poll), 180_000);
-          } else {
-            setInfraStatus((s) => ({ ...s, teams: "error" }));
-          }
-        } catch {
+            // Safety: stop after 3 minutes
+            setTimeout(() => { clearInterval(poll); resolve(); }, 180_000);
+          });
+        } else {
           setInfraStatus((s) => ({ ...s, teams: "error" }));
         }
       }
 
       if (dropbox && !cancelled) {
         setInfraStatus((s) => ({ ...s, dropbox: "pending" }));
-        try {
-          const r = await fetch(`/api/clients/${createdClientId}/dropbox`, {
-            method: "POST", headers, body: authBody,
-          });
-          setInfraStatus((s) => ({ ...s, dropbox: r.ok ? "created" : "error" }));
-        } catch {
-          setInfraStatus((s) => ({ ...s, dropbox: "error" }));
-        }
+        const ok = await callInfra("dropbox", "dropbox", authBody, headers);
+        setInfraStatus((s) => ({ ...s, dropbox: ok ? "created" : "error" }));
       }
     }
 
@@ -233,24 +243,29 @@ export default function NewOnboardingPage() {
             <h3 className="text-sm font-semibold text-oj-dark mb-3 text-center">Infrastructure Setup</h3>
             <div className="space-y-2">
               {infraItems.map((item) => (
-                <div key={item.key} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border text-sm ${
-                  item.status === "created"
-                    ? "bg-green-50 border-green-200 text-green-700"
-                    : item.status === "error"
-                    ? "bg-red-50 border-red-200 text-red-700"
-                    : "bg-gray-50 border-gray-200 text-gray-600"
-                }`}>
-                  {item.status === "created" ? (
-                    <span className="text-green-500 text-base shrink-0">&#10003;</span>
-                  ) : item.status === "error" ? (
-                    <span className="text-red-500 text-base shrink-0">&#10007;</span>
-                  ) : (
-                    <span className="animate-spin inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full shrink-0" />
+                <div key={item.key}>
+                  <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border text-sm ${
+                    item.status === "created"
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : item.status === "error"
+                      ? "bg-red-50 border-red-200 text-red-700"
+                      : "bg-gray-50 border-gray-200 text-gray-600"
+                  }`}>
+                    {item.status === "created" ? (
+                      <span className="text-green-500 text-base shrink-0">&#10003;</span>
+                    ) : item.status === "error" ? (
+                      <span className="text-red-500 text-base shrink-0">&#10007;</span>
+                    ) : (
+                      <span className="animate-spin inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full shrink-0" />
+                    )}
+                    <span className="font-medium">{item.label}</span>
+                    <span className="ml-auto text-xs">
+                      {item.status === "created" ? "Done" : item.status === "error" ? "Failed" : item.status === "creating" ? "In progress..." : "Setting up..."}
+                    </span>
+                  </div>
+                  {item.status === "error" && infraErrors[item.key] && (
+                    <p className="text-xs text-red-600 mt-1 px-4 break-words">{infraErrors[item.key]}</p>
                   )}
-                  <span className="font-medium">{item.label}</span>
-                  <span className="ml-auto text-xs">
-                    {item.status === "created" ? "Done" : item.status === "error" ? "Failed" : item.status === "creating" ? "In progress..." : "Setting up..."}
-                  </span>
                 </div>
               ))}
             </div>
