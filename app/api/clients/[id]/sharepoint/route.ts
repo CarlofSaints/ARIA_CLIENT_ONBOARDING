@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getClients, saveClients } from "@/lib/dataStore";
+import { getClients, updateClient } from "@/lib/dataStore";
 import { getOJToken, graph, graphJson, pollSPCopy, SP_HOST } from "@/lib/graphOJ";
 import { addLog } from "@/lib/activityLog";
 
@@ -84,13 +84,8 @@ export async function POST(
     const monitorUrl = copyRes.headers.get("Location");
     if (monitorUrl) await pollSPCopy(monitorUrl);
 
-    // 7. Persist status
-    const freshClients = await getClients();
-    const freshIdx = freshClients.findIndex((c) => c.id === id);
-    if (freshIdx !== -1) {
-      freshClients[freshIdx].sharepointStatus = "created";
-      await saveClients(freshClients);
-    }
+    // 7. Persist status (atomic update to avoid race conditions)
+    await updateClient(id, (c) => ({ ...c, sharepointStatus: "created" }));
 
     await addLog({
       action: "sharepoint.created",
@@ -115,12 +110,7 @@ export async function POST(
       success: false,
       error: errMsg.slice(0, 300),
     });
-    const freshClients = await getClients();
-    const freshIdx = freshClients.findIndex((c) => c.id === id);
-    if (freshIdx !== -1) {
-      freshClients[freshIdx].sharepointStatus = "error";
-      await saveClients(freshClients);
-    }
+    await updateClient(id, (c) => ({ ...c, sharepointStatus: "error" }));
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

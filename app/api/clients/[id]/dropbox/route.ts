@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getClients, saveClients } from "@/lib/dataStore";
+import { getClients, updateClient } from "@/lib/dataStore";
 import {
   getDropboxToken,
   getRootNamespaceId,
@@ -113,14 +113,12 @@ export async function POST(
       }
     }
 
-    // 4. Persist status
-    const freshClients = await getClients();
-    const freshIdx = freshClients.findIndex((c) => c.id === id);
-    if (freshIdx !== -1) {
-      freshClients[freshIdx].dropboxStatus = "created";
-      freshClients[freshIdx].dropboxFolderId = folderId;
-      await saveClients(freshClients);
-    }
+    // 4. Persist status (atomic update to avoid race conditions)
+    await updateClient(id, (c) => ({
+      ...c,
+      dropboxStatus: "created",
+      dropboxFolderId: folderId,
+    }));
 
     await addLog({
       action: "dropbox.created",
@@ -152,13 +150,11 @@ export async function POST(
       error: errMsg.slice(0, 300),
     });
 
-    const freshClients = await getClients();
-    const freshIdx = freshClients.findIndex((c) => c.id === id);
-    if (freshIdx !== -1) {
-      freshClients[freshIdx].dropboxStatus = "error";
-      freshClients[freshIdx].dropboxError = errMsg.slice(0, 300);
-      await saveClients(freshClients);
-    }
+    await updateClient(id, (c) => ({
+      ...c,
+      dropboxStatus: "error",
+      dropboxError: errMsg.slice(0, 300),
+    }));
 
     return NextResponse.json({ error: errMsg }, { status: 500 });
   }

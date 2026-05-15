@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { put, get, del } from "@vercel/blob";
+import { put, get, del, BlobNotFoundError } from "@vercel/blob";
 
 const dataDir = path.join(process.cwd(), "data");
 
@@ -21,7 +21,10 @@ function writeJsonSync(filename: string, data: unknown): void {
 
 /**
  * Read JSON data from Vercel Blob (production) or local file (dev).
- * NO module-level cache — multi-container serverless safety.
+ *
+ * SAFETY: On blob read failure, we distinguish between "blob doesn't exist"
+ * (first-time seed from local file) vs "transient error" (throw — never
+ * overwrite production data with empty/stale seed data).
  */
 async function readData<T>(filename: string): Promise<T> {
   if (!useBlob) return readJsonSync<T>(filename);
@@ -32,18 +35,31 @@ async function readData<T>(filename: string): Promise<T> {
       const text = await new Response(result.stream).text();
       return JSON.parse(text) as T;
     }
+    // Non-200 but not an error — treat as not found
   } catch (err) {
-    console.error(`[dataStore] Blob read failed for ${filename}:`, err instanceof Error ? err.message : err);
+    // Blob genuinely doesn't exist — seed from local file
+    if (err instanceof BlobNotFoundError) {
+      try {
+        const data = readJsonSync<T>(filename);
+        await writeData(filename, data);
+        return data;
+      } catch {
+        return [] as unknown as T;
+      }
+    }
+    // Any other error is transient — DO NOT seed, throw instead
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[dataStore] Blob read failed for ${filename} (transient):`, msg);
+    throw new Error(`Transient blob read error for ${filename}: ${msg}`);
   }
 
-  // Fallback: seed from bundled JSON if blob doesn't exist yet
+  // Fell through (non-200, no error) — treat as not found, seed
   try {
     const data = readJsonSync<T>(filename);
     await writeData(filename, data);
     return data;
   } catch {
-    // If no bundled file either, return sensible empty defaults
-    return (Array.isArray([] as unknown) ? [] : {}) as T;
+    return [] as unknown as T;
   }
 }
 
@@ -64,6 +80,25 @@ async function writeData(filename: string, data: unknown): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to persist ${filename} to Vercel Blob: ${msg}`);
   }
+}
+
+/**
+ * Atomic single-client update. Reads the latest clients array, applies the
+ * updater function to the matching client, and writes back.
+ *
+ * This is safer than getClients() + saveClients() in concurrent contexts
+ * because it minimises the window between read and write.
+ */
+export async function updateClient(
+  clientId: string,
+  updater: (client: Client) => Client
+): Promise<Client | null> {
+  const clients = await getClients();
+  const idx = clients.findIndex((c) => c.id === clientId);
+  if (idx === -1) return null;
+  clients[idx] = updater(clients[idx]);
+  await saveClients(clients);
+  return clients[idx];
 }
 
 // --- Types ---

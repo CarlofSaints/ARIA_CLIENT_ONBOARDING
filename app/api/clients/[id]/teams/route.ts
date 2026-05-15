@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { getClients, saveClients, getCams } from "@/lib/dataStore";
+import { getClients, saveClients, getCams, updateClient } from "@/lib/dataStore";
 import { getOJToken, graph, graphJson, pollTeamsOp } from "@/lib/graphOJ";
 import { addLog } from "@/lib/activityLog";
 
@@ -271,16 +271,14 @@ async function createTeamsStructure(clientId: string) {
     }
   }
 
-  // --- 8. Persist team ID, status, and any non-fatal warnings ---
-  const freshClients = await getClients();
-  const freshIdx = freshClients.findIndex((c) => c.id === clientId);
-  if (freshIdx !== -1) {
-    freshClients[freshIdx].teamsStatus = "created";
-    freshClients[freshIdx].teamsId = teamId;
-    freshClients[freshIdx].teamsError = undefined;
-    freshClients[freshIdx].teamsWarnings = warnings.length > 0 ? warnings : undefined;
-    await saveClients(freshClients);
-  }
+  // --- 8. Persist team ID, status, and any non-fatal warnings (atomic update) ---
+  await updateClient(clientId, (c) => ({
+    ...c,
+    teamsStatus: "created",
+    teamsId: teamId,
+    teamsError: undefined,
+    teamsWarnings: warnings.length > 0 ? warnings : undefined,
+  }));
 }
 
 export async function POST(
@@ -332,13 +330,11 @@ export async function POST(
         success: false,
         error: errMsg,
       });
-      const freshClients = await getClients();
-      const freshIdx = freshClients.findIndex((c) => c.id === id);
-      if (freshIdx !== -1) {
-        freshClients[freshIdx].teamsStatus = "error";
-        freshClients[freshIdx].teamsError = errMsg;
-        await saveClients(freshClients);
-      }
+      await updateClient(id, (c) => ({
+        ...c,
+        teamsStatus: "error",
+        teamsError: errMsg,
+      }));
     }
   });
 
