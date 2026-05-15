@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, logoBase64, website, camId, camEmail: camEmailOverride, emails, startDate, channelIds, contactName, userId, userName } = body as {
+  const { name, logoBase64, website, camId, camEmail: camEmailOverride, emails, startDate, channelIds, contactName, userId, userName, createSharePoint, createTeams, createDropbox } = body as {
     name: string;
     logoBase64?: string;
     website?: string;
@@ -27,6 +27,9 @@ export async function POST(request: Request) {
     contactName: string;
     userId?: string;
     userName?: string;
+    createSharePoint?: boolean;
+    createTeams?: boolean;
+    createDropbox?: boolean;
   };
 
   if (!name || !camId || !emails?.length || !startDate || !channelIds?.length || !contactName) {
@@ -170,49 +173,55 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-create SharePoint folder
-    try {
-      const spRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, userName }),
-      });
-      if (!spRes.ok) {
-        const d = await spRes.text();
-        console.error("Auto SharePoint creation failed:", spRes.status, d);
+    // Auto-create SharePoint folder (if checked)
+    if (createSharePoint !== false) {
+      try {
+        const spRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, userName }),
+        });
+        if (!spRes.ok) {
+          const d = await spRes.text();
+          console.error("Auto SharePoint creation failed:", spRes.status, d);
+        }
+      } catch (err) {
+        console.error("Auto SharePoint creation error:", err);
       }
-    } catch (err) {
-      console.error("Auto SharePoint creation error:", err);
     }
 
-    // Auto-create Teams structure
-    try {
-      const teamsRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, userName }),
-      });
-      if (!teamsRes.ok) {
-        const d = await teamsRes.text();
-        console.error("Auto Teams creation failed:", teamsRes.status, d);
+    // Auto-create Teams structure (if checked)
+    if (createTeams !== false) {
+      try {
+        const teamsRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, userName }),
+        });
+        if (!teamsRes.ok) {
+          const d = await teamsRes.text();
+          console.error("Auto Teams creation failed:", teamsRes.status, d);
+        }
+      } catch (err) {
+        console.error("Auto Teams creation error:", err);
       }
-    } catch (err) {
-      console.error("Auto Teams creation error:", err);
     }
 
-    // Auto-create Dropbox folder
-    try {
-      const dbxRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, userName }),
-      });
-      if (!dbxRes.ok) {
-        const d = await dbxRes.text();
-        console.error("Auto Dropbox creation failed:", dbxRes.status, d);
+    // Auto-create Dropbox folder (if checked)
+    if (createDropbox !== false) {
+      try {
+        const dbxRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, userName }),
+        });
+        if (!dbxRes.ok) {
+          const d = await dbxRes.text();
+          console.error("Auto Dropbox creation failed:", dbxRes.status, d);
+        }
+      } catch (err) {
+        console.error("Auto Dropbox creation error:", err);
       }
-    } catch (err) {
-      console.error("Auto Dropbox creation error:", err);
     }
   });
 

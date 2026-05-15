@@ -19,6 +19,9 @@ const emptyForm = {
   emails: [""],
   logoBase64: undefined as string | undefined,
   logoName: "",
+  createSharePoint: true,
+  createTeams: true,
+  createDropbox: true,
 };
 
 export default function NewOnboardingPage() {
@@ -98,6 +101,9 @@ export default function NewOnboardingPage() {
           contactName: form.contactName,
           userId: session?.id,
           userName: session ? `${session.name} ${session.surname}` : undefined,
+          createSharePoint: form.createSharePoint,
+          createTeams: form.createTeams,
+          createDropbox: form.createDropbox,
         }),
       });
       if (!res.ok) {
@@ -128,7 +134,7 @@ export default function NewOnboardingPage() {
           The client record has been saved and a welcome email has been sent.
         </p>
         <p className="text-sm text-oj-muted mb-8">
-          SharePoint folders and Teams channels are being created automatically in the background.
+          Infrastructure is being set up automatically in the background.
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           {createdClientId && (
@@ -367,6 +373,43 @@ export default function NewOnboardingPage() {
           >
             + Add another recipient
           </button>
+        </div>
+
+        {/* Infrastructure Actions */}
+        <div>
+          <label className="block text-sm font-semibold text-oj-dark mb-2">
+            Auto-Create Infrastructure
+          </label>
+          <p className="text-xs text-oj-muted mb-3">Select which infrastructure to set up automatically when the client is created.</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 p-3 rounded-lg border border-oj-border cursor-pointer hover:border-oj-blue hover:bg-oj-blue-light/50 transition-colors text-sm select-none">
+              <input
+                type="checkbox"
+                checked={form.createSharePoint}
+                onChange={(e) => setForm((f) => ({ ...f, createSharePoint: e.target.checked }))}
+                className="accent-oj-blue"
+              />
+              Create SharePoint Folders
+            </label>
+            <label className="flex items-center gap-2.5 p-3 rounded-lg border border-oj-border cursor-pointer hover:border-oj-blue hover:bg-oj-blue-light/50 transition-colors text-sm select-none">
+              <input
+                type="checkbox"
+                checked={form.createTeams}
+                onChange={(e) => setForm((f) => ({ ...f, createTeams: e.target.checked }))}
+                className="accent-oj-blue"
+              />
+              Create Teams Channels
+            </label>
+            <label className="flex items-center gap-2.5 p-3 rounded-lg border border-oj-border cursor-pointer hover:border-oj-blue hover:bg-oj-blue-light/50 transition-colors text-sm select-none">
+              <input
+                type="checkbox"
+                checked={form.createDropbox}
+                onChange={(e) => setForm((f) => ({ ...f, createDropbox: e.target.checked }))}
+                className="accent-oj-blue"
+              />
+              Create Dropbox Folders
+            </label>
+          </div>
         </div>
 
         {submitError && (

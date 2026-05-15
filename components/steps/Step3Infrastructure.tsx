@@ -15,6 +15,7 @@ type Props = {
   teamsLoading: boolean;
   dropboxLoading: boolean;
   infraError: string;
+  infraSuccess: string;
   onCreateSharePoint: () => void;
   onCreateTeams: () => void;
   onCreateDropbox: () => void;
@@ -33,6 +34,7 @@ export default function Step3Infrastructure({
   teamsLoading,
   dropboxLoading,
   infraError,
+  infraSuccess,
   onCreateSharePoint,
   onCreateTeams,
   onCreateDropbox,
@@ -136,6 +138,9 @@ export default function Step3Infrastructure({
         </div>
         {infraError && (
           <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{infraError}</p>
+        )}
+        {infraSuccess && (
+          <p className="mt-3 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{infraSuccess}</p>
         )}
       </div>
 

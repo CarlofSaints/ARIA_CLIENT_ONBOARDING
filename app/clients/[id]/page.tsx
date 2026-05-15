@@ -71,6 +71,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [dropboxLoading, setDropboxLoading] = useState(false);
   const [infraError, setInfraError] = useState("");
+  const [infraSuccess, setInfraSuccess] = useState("");
   const [personnelLoading, setPersonnelLoading] = useState(false);
   const [personnelCopied, setPersonnelCopied] = useState(false);
   const [editPersonnelOpen, setEditPersonnelOpen] = useState(false);
@@ -187,6 +188,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       if (found) {
         setClient(found);
         setChecklist(found.checklist ?? {});
+        if (found.teamsStatus === "created") {
+          setInfraSuccess("Teams structure created successfully.");
+          setTimeout(() => setInfraSuccess(""), 5000);
+        }
         if (found.teamsStatus !== "creating") clearInterval(interval);
       }
     }, 4000);
@@ -195,7 +200,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const handleCreateSharePoint = async () => {
     if (client?.sharepointStatus === "created") return;
-    setInfraError("");
+    setInfraError(""); setInfraSuccess("");
     setSpLoading(true);
     try {
       const res = await fetch(`/api/clients/${id}/sharepoint`, {
@@ -206,6 +211,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       const data = await res.json();
       if (!res.ok) { setInfraError(data.error ?? "SharePoint creation failed"); return; }
       await loadClient();
+      setInfraSuccess("SharePoint folder created successfully.");
+      setTimeout(() => setInfraSuccess(""), 5000);
     } catch {
       setInfraError("Network error during SharePoint creation");
     } finally {
@@ -215,7 +222,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const handleCreateTeams = async () => {
     if (client?.teamsStatus === "created" || client?.teamsStatus === "creating") return;
-    setInfraError("");
+    setInfraError(""); setInfraSuccess("");
     setTeamsLoading(true);
     try {
       const res = await fetch(`/api/clients/${id}/teams`, {
@@ -235,7 +242,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const handleCreateDropbox = async () => {
     if (client?.dropboxStatus === "created") return;
-    setInfraError("");
+    setInfraError(""); setInfraSuccess("");
     setDropboxLoading(true);
     try {
       const res = await fetch(`/api/clients/${id}/dropbox`, {
@@ -246,6 +253,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       const data = await res.json();
       if (!res.ok) { setInfraError(data.error ?? "Dropbox creation failed"); return; }
       await loadClient();
+      setInfraSuccess("Dropbox folder created successfully.");
+      setTimeout(() => setInfraSuccess(""), 5000);
     } catch {
       setInfraError("Network error during Dropbox creation");
     } finally {
@@ -581,6 +590,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           teamsLoading={teamsLoading}
           dropboxLoading={dropboxLoading}
           infraError={infraError}
+          infraSuccess={infraSuccess}
           onCreateSharePoint={handleCreateSharePoint}
           onCreateTeams={handleCreateTeams}
           onCreateDropbox={handleCreateDropbox}
