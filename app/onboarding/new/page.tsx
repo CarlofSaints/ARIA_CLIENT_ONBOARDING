@@ -48,12 +48,20 @@ export default function NewOnboardingPage() {
   }, [ready]);
 
   // Poll infrastructure status after client creation
+  const [infraTimedOut, setInfraTimedOut] = useState(false);
   useEffect(() => {
     if (!success || !createdClientId) return;
     const anyPending = infraRequested.sp || infraRequested.teams || infraRequested.dropbox;
     if (!anyPending) return;
 
+    const startedAt = Date.now();
     const interval = setInterval(async () => {
+      // Stop polling after 2 minutes — show timeout message
+      if (Date.now() - startedAt > 120_000) {
+        setInfraTimedOut(true);
+        clearInterval(interval);
+        return;
+      }
       try {
         const res = await fetch(`/api/clients/${createdClientId}`);
         if (!res.ok) return;
@@ -207,6 +215,11 @@ export default function NewOnboardingPage() {
             {infraItems.some((i) => i.status === "error") && (
               <p className="text-xs text-red-600 mt-2 text-center">
                 Some items failed. You can retry them on the client&apos;s Infrastructure page.
+              </p>
+            )}
+            {infraTimedOut && infraItems.some((i) => i.status !== "created" && i.status !== "error") && (
+              <p className="text-xs text-amber-700 mt-2 text-center">
+                Still processing. You can check the status on the client&apos;s Infrastructure page.
               </p>
             )}
           </div>

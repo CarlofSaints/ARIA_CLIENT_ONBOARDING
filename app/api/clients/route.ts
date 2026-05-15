@@ -173,56 +173,43 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-create SharePoint folder (if checked)
+    // Auto-create infrastructure in parallel (each is an independent serverless call)
+    const infraPromises: Promise<void>[] = [];
+
     if (createSharePoint !== false) {
-      try {
-        const spRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
+      infraPromises.push(
+        fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, userName }),
-        });
-        if (!spRes.ok) {
-          const d = await spRes.text();
-          console.error("Auto SharePoint creation failed:", spRes.status, d);
-        }
-      } catch (err) {
-        console.error("Auto SharePoint creation error:", err);
-      }
+        }).then(async (r) => { if (!r.ok) console.error("Auto SharePoint failed:", r.status, await r.text()); })
+          .catch((err) => console.error("Auto SharePoint error:", err))
+      );
     }
 
-    // Auto-create Teams structure (if checked)
     if (createTeams !== false) {
-      try {
-        const teamsRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
+      infraPromises.push(
+        fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, userName }),
-        });
-        if (!teamsRes.ok) {
-          const d = await teamsRes.text();
-          console.error("Auto Teams creation failed:", teamsRes.status, d);
-        }
-      } catch (err) {
-        console.error("Auto Teams creation error:", err);
-      }
+        }).then(async (r) => { if (!r.ok) console.error("Auto Teams failed:", r.status, await r.text()); })
+          .catch((err) => console.error("Auto Teams error:", err))
+      );
     }
 
-    // Auto-create Dropbox folder (if checked)
     if (createDropbox !== false) {
-      try {
-        const dbxRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
+      infraPromises.push(
+        fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, userName }),
-        });
-        if (!dbxRes.ok) {
-          const d = await dbxRes.text();
-          console.error("Auto Dropbox creation failed:", dbxRes.status, d);
-        }
-      } catch (err) {
-        console.error("Auto Dropbox creation error:", err);
-      }
+        }).then(async (r) => { if (!r.ok) console.error("Auto Dropbox failed:", r.status, await r.text()); })
+          .catch((err) => console.error("Auto Dropbox error:", err))
+      );
     }
+
+    await Promise.allSettled(infraPromises);
   });
 
   return NextResponse.json(newClient, { status: 201 });
