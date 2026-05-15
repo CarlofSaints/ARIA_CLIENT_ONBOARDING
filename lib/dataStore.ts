@@ -59,9 +59,11 @@ async function readData<T>(filename: string): Promise<T> {
     }
   }
 
-  // Step 3: Blob exists → read it. If this fails, THROW. Never return empty.
+  // Step 3: Blob exists → read it with cache-busting to avoid stale CDN reads.
+  // Vercel Blob public URLs go through CDN — after a write, stale data can persist briefly.
   try {
-    const res = await fetch(blobUrl);
+    const cacheBust = `${blobUrl}${blobUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    const res = await fetch(cacheBust, { cache: "no-store" });
     if (!res.ok) {
       throw new Error(`Blob fetch returned ${res.status} for ${key}`);
     }
