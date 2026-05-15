@@ -47,40 +47,82 @@ export default function NewOnboardingPage() {
     fetch("/api/channels").then((r) => r.json()).then(setChannels);
   }, [ready]);
 
-  // Poll infrastructure status after client creation
-  const [infraTimedOut, setInfraTimedOut] = useState(false);
+  // Fire infrastructure calls from the browser after client creation.
+  // The after() server callback was unreliable (self-referencing fetch issues on Vercel).
+  // Running from the client is reliable — same as clicking the buttons on Step 3.
   useEffect(() => {
     if (!success || !createdClientId) return;
-    const anyPending = infraRequested.sp || infraRequested.teams || infraRequested.dropbox;
-    if (!anyPending) return;
+    const { sp, teams, dropbox } = infraRequested;
+    if (!sp && !teams && !dropbox) return;
 
-    const startedAt = Date.now();
-    const interval = setInterval(async () => {
-      // Stop polling after 2 minutes — show timeout message
-      if (Date.now() - startedAt > 120_000) {
-        setInfraTimedOut(true);
-        clearInterval(interval);
-        return;
+    let cancelled = false;
+    async function runInfra() {
+      const authBody = JSON.stringify({
+        userId: session?.id,
+        userName: session ? `${session.name} ${session.surname}` : undefined,
+      });
+      const headers = { "Content-Type": "application/json" };
+
+      // Sequential to avoid blob write races
+      if (sp && !cancelled) {
+        setInfraStatus((s) => ({ ...s, sp: "pending" }));
+        try {
+          const r = await fetch(`/api/clients/${createdClientId}/sharepoint`, {
+            method: "POST", headers, body: authBody,
+          });
+          setInfraStatus((s) => ({ ...s, sp: r.ok ? "created" : "error" }));
+        } catch {
+          setInfraStatus((s) => ({ ...s, sp: "error" }));
+        }
       }
-      try {
-        const res = await fetch(`/api/clients/${createdClientId}`);
-        if (!res.ok) return;
-        const client = await res.json();
-        const newStatus = {
-          sp: infraRequested.sp ? (client.sharepointStatus ?? "pending") : undefined,
-          teams: infraRequested.teams ? (client.teamsStatus ?? "pending") : undefined,
-          dropbox: infraRequested.dropbox ? (client.dropboxStatus ?? "pending") : undefined,
-        };
-        setInfraStatus(newStatus);
-        // Stop polling when all requested items are resolved
-        const vals = Object.values(newStatus).filter((v) => v !== undefined);
-        const allDone = vals.every((v) => v === "created" || v === "error");
-        if (allDone) clearInterval(interval);
-      } catch { /* ignore polling errors */ }
-    }, 3000);
 
-    return () => clearInterval(interval);
-  }, [success, createdClientId, infraRequested]);
+      if (teams && !cancelled) {
+        setInfraStatus((s) => ({ ...s, teams: "creating" }));
+        try {
+          const r = await fetch(`/api/clients/${createdClientId}/teams`, {
+            method: "POST", headers, body: authBody,
+          });
+          if (r.ok) {
+            // Teams uses async creation — poll for completion
+            setInfraStatus((s) => ({ ...s, teams: "creating" }));
+            const poll = setInterval(async () => {
+              try {
+                const c = await fetch(`/api/clients/${createdClientId}`);
+                if (!c.ok) return;
+                const data = await c.json();
+                if (data.teamsStatus === "created" || data.teamsStatus === "error") {
+                  setInfraStatus((s) => ({ ...s, teams: data.teamsStatus }));
+                  clearInterval(poll);
+                }
+              } catch { /* ignore */ }
+            }, 4000);
+            // Safety: stop polling after 3 minutes
+            setTimeout(() => clearInterval(poll), 180_000);
+          } else {
+            setInfraStatus((s) => ({ ...s, teams: "error" }));
+          }
+        } catch {
+          setInfraStatus((s) => ({ ...s, teams: "error" }));
+        }
+      }
+
+      if (dropbox && !cancelled) {
+        setInfraStatus((s) => ({ ...s, dropbox: "pending" }));
+        try {
+          const r = await fetch(`/api/clients/${createdClientId}/dropbox`, {
+            method: "POST", headers, body: authBody,
+          });
+          setInfraStatus((s) => ({ ...s, dropbox: r.ok ? "created" : "error" }));
+        } catch {
+          setInfraStatus((s) => ({ ...s, dropbox: "error" }));
+        }
+      }
+    }
+
+    runInfra();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [success, createdClientId]);
 
   const toggleChannel = (id: string) => {
     setForm((f) => ({
@@ -215,11 +257,6 @@ export default function NewOnboardingPage() {
             {infraItems.some((i) => i.status === "error") && (
               <p className="text-xs text-red-600 mt-2 text-center">
                 Some items failed. You can retry them on the client&apos;s Infrastructure page.
-              </p>
-            )}
-            {infraTimedOut && infraItems.some((i) => i.status !== "created" && i.status !== "error") && (
-              <p className="text-xs text-amber-700 mt-2 text-center">
-                Still processing. You can check the status on the client&apos;s Infrastructure page.
               </p>
             )}
           </div>

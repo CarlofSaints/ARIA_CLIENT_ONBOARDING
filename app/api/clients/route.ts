@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { sendWelcomeEmail, sendCamNewClientEmail } from "@/lib/email";
 import { addLog } from "@/lib/activityLog";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const COGNITO_FORM_URL = "https://www.cognitoforms.com/outerjoin1/clientbillinginformationoj";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aria-onboarding-two.vercel.app";
@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, logoBase64, website, camId, camEmail: camEmailOverride, emails, startDate, channelIds, contactName, userId, userName, createSharePoint, createTeams, createDropbox } = body as {
+  const { name, logoBase64, website, camId, camEmail: camEmailOverride, emails, startDate, channelIds, contactName, userId, userName } = body as {
     name: string;
     logoBase64?: string;
     website?: string;
@@ -27,9 +27,6 @@ export async function POST(request: Request) {
     contactName: string;
     userId?: string;
     userName?: string;
-    createSharePoint?: boolean;
-    createTeams?: boolean;
-    createDropbox?: boolean;
   };
 
   if (!name || !camId || !emails?.length || !startDate || !channelIds?.length || !contactName) {
@@ -173,46 +170,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-create infrastructure SEQUENTIALLY to prevent blob write races.
-    // Each call reads + writes the clients blob — parallel calls overwrite each other.
-    if (createSharePoint !== false) {
-      try {
-        const r = await fetch(`${SITE_URL}/api/clients/${newClient.id}/sharepoint`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, userName }),
-        });
-        if (!r.ok) console.error("Auto SharePoint failed:", r.status, await r.text());
-      } catch (err) {
-        console.error("Auto SharePoint error:", err);
-      }
-    }
-
-    if (createTeams !== false) {
-      try {
-        const r = await fetch(`${SITE_URL}/api/clients/${newClient.id}/teams`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, userName }),
-        });
-        if (!r.ok) console.error("Auto Teams failed:", r.status, await r.text());
-      } catch (err) {
-        console.error("Auto Teams error:", err);
-      }
-    }
-
-    if (createDropbox !== false) {
-      try {
-        const r = await fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, userName }),
-        });
-        if (!r.ok) console.error("Auto Dropbox failed:", r.status, await r.text());
-      } catch (err) {
-        console.error("Auto Dropbox error:", err);
-      }
-    }
+    // Infrastructure (SP, Teams, Dropbox) is now triggered client-side from the
+    // success screen. The after() self-referencing fetch pattern was unreliable
+    // on Vercel serverless — the calls silently failed every time.
   });
 
   return NextResponse.json(newClient, { status: 201 });
