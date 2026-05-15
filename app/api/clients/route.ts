@@ -199,6 +199,21 @@ export async function POST(request: Request) {
     } catch (err) {
       console.error("Auto Teams creation error:", err);
     }
+
+    // Auto-create Dropbox folder
+    try {
+      const dbxRes = await fetch(`${SITE_URL}/api/clients/${newClient.id}/dropbox`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, userName }),
+      });
+      if (!dbxRes.ok) {
+        const d = await dbxRes.text();
+        console.error("Auto Dropbox creation failed:", dbxRes.status, d);
+      }
+    } catch (err) {
+      console.error("Auto Dropbox creation error:", err);
+    }
   });
 
   return NextResponse.json(newClient, { status: 201 });

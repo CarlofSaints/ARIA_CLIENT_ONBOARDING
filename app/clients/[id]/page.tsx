@@ -69,6 +69,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const [spLoading, setSpLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(false);
+  const [dropboxLoading, setDropboxLoading] = useState(false);
   const [infraError, setInfraError] = useState("");
   const [personnelLoading, setPersonnelLoading] = useState(false);
   const [personnelCopied, setPersonnelCopied] = useState(false);
@@ -229,6 +230,26 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       setInfraError("Network error during Teams creation");
     } finally {
       setTeamsLoading(false);
+    }
+  };
+
+  const handleCreateDropbox = async () => {
+    if (client?.dropboxStatus === "created") return;
+    setInfraError("");
+    setDropboxLoading(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/dropbox`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: typedSession?.id, userName: typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setInfraError(data.error ?? "Dropbox creation failed"); return; }
+      await loadClient();
+    } catch {
+      setInfraError("Network error during Dropbox creation");
+    } finally {
+      setDropboxLoading(false);
     }
   };
 
@@ -558,9 +579,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           {...commonProps}
           spLoading={spLoading}
           teamsLoading={teamsLoading}
+          dropboxLoading={dropboxLoading}
           infraError={infraError}
           onCreateSharePoint={handleCreateSharePoint}
           onCreateTeams={handleCreateTeams}
+          onCreateDropbox={handleCreateDropbox}
         />
       )}
 

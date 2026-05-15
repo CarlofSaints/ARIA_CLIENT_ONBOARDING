@@ -13,9 +13,11 @@ type Props = {
   saving: string | null;
   spLoading: boolean;
   teamsLoading: boolean;
+  dropboxLoading: boolean;
   infraError: string;
   onCreateSharePoint: () => void;
   onCreateTeams: () => void;
+  onCreateDropbox: () => void;
   onToggleItem: (id: string, val: boolean) => void;
   onToggleChannelItem: (id: string, channelId: string, val: boolean) => void;
 };
@@ -29,9 +31,11 @@ export default function Step3Infrastructure({
   saving,
   spLoading,
   teamsLoading,
+  dropboxLoading,
   infraError,
   onCreateSharePoint,
   onCreateTeams,
+  onCreateDropbox,
   onToggleItem,
   onToggleChannelItem,
 }: Props) {
@@ -100,6 +104,32 @@ export default function Step3Infrastructure({
             {client.teamsStatus === "error" && client.teamsError && (
               <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-sm break-words">
                 <strong>Teams error:</strong> {client.teamsError}
+              </p>
+            )}
+          </div>
+
+          {/* Dropbox */}
+          <div className="flex flex-col gap-2">
+            {client.dropboxStatus === "created" ? (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+                <span>✓</span> Dropbox folder created
+              </div>
+            ) : (
+              <button
+                onClick={onCreateDropbox}
+                disabled={dropboxLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {dropboxLoading ? (
+                  <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" /> Creating folder…</>
+                ) : (
+                  <>{client.dropboxStatus === "error" ? "⚠ Retry Dropbox" : "📂 Create Dropbox Folder"}</>
+                )}
+              </button>
+            )}
+            {client.dropboxStatus === "error" && client.dropboxError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-sm break-words">
+                <strong>Dropbox error:</strong> {client.dropboxError}
               </p>
             )}
           </div>

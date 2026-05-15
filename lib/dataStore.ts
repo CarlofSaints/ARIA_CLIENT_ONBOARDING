@@ -185,6 +185,9 @@ export type Client = {
   teamsId?: string;
   teamsError?: string;
   teamsWarnings?: string[];
+  dropboxStatus?: "created" | "error";
+  dropboxFolderId?: string;
+  dropboxError?: string;
   personnelToken?: string;
   personnelSubmittedAt?: string;
   personnelSpUrl?: string;
