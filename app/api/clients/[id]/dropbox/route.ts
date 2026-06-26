@@ -118,6 +118,7 @@ export async function POST(
       ...c,
       dropboxStatus: "created",
       dropboxFolderId: folderId,
+      dropboxError: undefined, // clear any stale error from a previous failed attempt
     }));
 
     await addLog({
