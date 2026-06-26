@@ -5,15 +5,45 @@ import { addLog } from "@/lib/activityLog";
 
 const TEMPLATE_PATH = "_ClientFolderTemplate/ARIA";
 
+// SP copy polling can run up to ~55s — give the function room.
+export const maxDuration = 60;
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const body = await request.json().catch(() => ({})) as { userId?: string; userName?: string };
-  const clients = await getClients();
-  const idx = clients.findIndex((c) => c.id === id);
-  if (idx === -1) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // This is fired right after the client is created. Vercel Blob is eventually
+  // consistent, so getClients() can briefly return a stale list that doesn't yet
+  // contain the new client. That previously surfaced as a bare "Not found" with no
+  // log entry (the early return was above the try/catch). Retry the read a few times
+  // before giving up — the client was definitely created, it just hasn't propagated.
+  let clients = await getClients();
+  let idx = clients.findIndex((c) => c.id === id);
+  for (let attempt = 0; idx === -1 && attempt < 4; attempt++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    clients = await getClients();
+    idx = clients.findIndex((c) => c.id === id);
+  }
+
+  if (idx === -1) {
+    await addLog({
+      action: "sharepoint.created",
+      clientId: id,
+      clientName: id,
+      userId: body.userId,
+      userName: body.userName,
+      details: "SharePoint folder creation aborted — client not found in the data store after retries (likely blob propagation).",
+      success: false,
+      error: `Client ${id} not found after retrying the data read.`,
+    });
+    return NextResponse.json(
+      { error: "Client not found after retries — data may still be propagating. Please retry in a moment." },
+      { status: 404 }
+    );
+  }
 
   const client = clients[idx];
   if (client.sharepointStatus === "created") {
