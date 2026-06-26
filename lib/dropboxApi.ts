@@ -1,8 +1,10 @@
 // Dropbox Business API helper — mirrors the lib/graphOJ.ts pattern
 
-const DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY!;
-const DROPBOX_APP_SECRET = process.env.DROPBOX_APP_SECRET!;
-const DROPBOX_REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN!;
+// .trim() guards against an invisible trailing newline/space getting pasted into
+// the Vercel env var textarea — which makes Dropbox reject the token as "malformed".
+const DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY?.trim() ?? "";
+const DROPBOX_APP_SECRET = process.env.DROPBOX_APP_SECRET?.trim() ?? "";
+const DROPBOX_REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN?.trim() ?? "";
 
 export const DROPBOX_BASE_PATH =
   process.env.DROPBOX_BASE_PATH ??
