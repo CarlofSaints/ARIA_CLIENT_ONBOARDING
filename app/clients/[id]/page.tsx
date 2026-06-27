@@ -722,9 +722,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         <CognitoLinkModal
           clientId={id}
           session={session}
-          onLinked={async () => {
+          onLinked={(data) => {
             setCognitoModalOpen(false);
-            await loadClient();
+            // Apply the just-linked data optimistically. The link API already persisted
+            // it, but re-reading clients.json from Vercel Blob right away returns the
+            // pre-link client (eventual consistency) — which made the link look like a
+            // no-op. Use the data the modal hands back instead of a stale reload.
+            setClient((prev) =>
+              prev ? { ...prev, cognitoData: data, cognitoLinkedAt: new Date().toISOString() } : prev
+            );
           }}
           onClose={() => setCognitoModalOpen(false)}
         />

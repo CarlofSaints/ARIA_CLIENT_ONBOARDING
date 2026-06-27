@@ -64,25 +64,35 @@ export default function CognitoLinkModal({ clientId, onLinked, onClose, session 
   }, [search]);
 
   const handleLink = async (entry: CognitoEntry) => {
-    const entryId = entry.Id ?? entry.Number;
-    if (!entryId) return;
+    // Cognito's single-entry endpoint keys off the entry number. Depending on the
+    // payload that lives at Id (often the number), Number, or Entry.Number.
+    const meta = entry.Entry as { Number?: unknown } | undefined;
+    const entryId = entry.Id ?? entry.Number ?? meta?.Number;
+    if (entryId === undefined || entryId === null || entryId === "") {
+      setError("Couldn't determine this entry's ID — cannot link it.");
+      return;
+    }
+    setError("");
     setLinking(String(entryId));
     try {
       const res = await fetch(`/api/clients/${clientId}/cognito-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           entryId: String(entryId),
           userId: session?.id,
           userName: session ? `${session.name} ${session.surname}` : undefined,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         onLinked(data.cognitoData ?? entry);
       } else {
-        setError(data.error ?? "Failed to link entry");
+        setError(data.error ?? `Failed to link entry (HTTP ${res.status})`);
       }
+    } catch {
+      setError("Network error linking entry — please try again.");
     } finally {
       setLinking(null);
     }
