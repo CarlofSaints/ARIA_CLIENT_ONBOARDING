@@ -4,6 +4,8 @@ import { getClients, saveClients, getLogs, saveLogs } from "@/lib/dataStore";
 import { getValidTokens, buildXeroContact, xeroPost, xeroGet } from "@/lib/xero";
 import { randomUUID } from "crypto";
 
+export const maxDuration = 60;
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,8 +14,18 @@ export async function POST(
   const body = await request.json() as { userId?: string; userName?: string };
   const { userId, userName } = body;
 
-  const clients = await getClients();
-  const idx = clients.findIndex((c) => c.id === id);
+  // Read the client, tolerating Vercel Blob eventual consistency. The Cognito link
+  // may have been saved moments ago — the Xero card now appears instantly after
+  // linking, so the user can click "Create Xero Contact" before the just-written
+  // cognitoData has propagated. Retry the read until it's consistent. This also
+  // prevents clobbering: we must NOT save the client back without its cognitoData.
+  let clients = await getClients();
+  let idx = clients.findIndex((c) => c.id === id);
+  for (let attempt = 0; attempt < 4 && (idx === -1 || !clients[idx]?.cognitoData); attempt++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    clients = await getClients();
+    idx = clients.findIndex((c) => c.id === id);
+  }
   if (idx === -1) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
   const client = clients[idx];

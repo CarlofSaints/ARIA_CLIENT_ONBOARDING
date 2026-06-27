@@ -203,6 +203,22 @@ export default function Step1AccountSetup({
                     Link Cognito data first to enable NDA sending.
                   </div>
                 )}
+                {/* Manual override: mark the NDA as already handled (e.g. signed during
+                    the trial), without sending it via the app. Ticking this updates the
+                    "NDA sent to client" checklist item (cl-nda-sent) directly. */}
+                <label className="flex items-center gap-2 mt-1 px-1 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!checklist["cl-nda-sent"]?.completed}
+                    disabled={saving === "cl-nda-sent"}
+                    onChange={(e) => onToggleItem("cl-nda-sent", e.target.checked)}
+                    className="w-4 h-4 rounded border-oj-border text-oj-blue focus:ring-2 focus:ring-oj-blue disabled:opacity-50"
+                  />
+                  <span className="text-sm text-oj-dark">
+                    NDA already in place (mark as done)
+                    {saving === "cl-nda-sent" && <span className="ml-1 text-xs text-oj-muted">saving…</span>}
+                  </span>
+                </label>
                 {ndaError && (
                   <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-sm">{ndaError}</p>
                 )}
