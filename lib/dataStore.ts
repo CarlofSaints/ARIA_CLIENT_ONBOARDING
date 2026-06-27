@@ -77,14 +77,27 @@ async function readData<T>(filename: string): Promise<T> {
   }
 }
 
-async function writeData(filename: string, data: unknown): Promise<void> {
+async function writeData(
+  filename: string,
+  data: unknown,
+  opts: { allowEmpty?: boolean } = {}
+): Promise<void> {
   if (!useBlob) {
     writeJsonSync(filename, data);
     return;
   }
 
-  // SAFETY: Never write an empty clients array
-  if (filename === "clients.json" && Array.isArray(data) && data.length === 0) {
+  // SAFETY: Never write an empty clients array UNLESS the caller explicitly opts in.
+  // The guard exists to stop a stale/failed read from wiping every client (this app has
+  // lost all data twice). A genuine "delete the last client" is the one legitimate way to
+  // reach an empty array — the DELETE handler passes allowEmpty:true only after it has
+  // confirmed it read a real list containing the target.
+  if (
+    !opts.allowEmpty &&
+    filename === "clients.json" &&
+    Array.isArray(data) &&
+    data.length === 0
+  ) {
     console.error("[dataStore] BLOCKED: Attempted to write empty clients array to blob. This would wipe all data.");
     throw new Error("Refusing to write empty clients array — possible data corruption");
   }
@@ -276,7 +289,10 @@ export async function saveUsers(users: User[]): Promise<void> { return writeData
 
 // --- Clients ---
 export async function getClients(): Promise<Client[]> { return readData<Client[]>("clients.json"); }
-export async function saveClients(clients: Client[]): Promise<void> { return writeData("clients.json", clients); }
+export async function saveClients(
+  clients: Client[],
+  opts: { allowEmpty?: boolean } = {}
+): Promise<void> { return writeData("clients.json", clients, opts); }
 
 // --- Checklist ---
 export async function getChecklistItems(): Promise<ChecklistItemDef[]> { return readData<ChecklistItemDef[]>("checklist.json"); }

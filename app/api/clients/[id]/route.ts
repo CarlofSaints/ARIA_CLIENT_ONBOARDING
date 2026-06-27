@@ -39,7 +39,9 @@ export async function DELETE(
   if (!target) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  await saveClients(clients.filter((c) => c.id !== id));
+  // We read a real list that contained the target, so an empty result here means the
+  // user genuinely deleted their last client — opt past the empty-array wipe guard.
+  await saveClients(clients.filter((c) => c.id !== id), { allowEmpty: true });
   await addLog({ action: "client.deleted", clientId: id, clientName: target.name, details: "Client permanently deleted.", success: true });
   return NextResponse.json({ ok: true });
 }
