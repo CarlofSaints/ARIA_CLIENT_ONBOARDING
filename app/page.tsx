@@ -64,8 +64,8 @@ export default function HomePage() {
 
   const loadData = async () => {
     const [c, cm] = await Promise.all([
-      fetch("/api/clients").then((r) => r.json()),
-      fetch("/api/cams").then((r) => r.json()),
+      fetch("/api/clients", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/cams", { cache: "no-store" }).then((r) => r.json()),
     ]);
     setClients(c);
     setCams(cm);
@@ -113,9 +113,18 @@ export default function HomePage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteClient) return;
-    await fetch(`/api/clients/${deleteClient.id}`, { method: "DELETE" });
+    const id = deleteClient.id;
     setDeleteClient(null);
-    await loadData();
+    // Optimistically drop it from the list. Vercel Blob is eventually consistent,
+    // so re-reading immediately after the DELETE can still return the just-removed
+    // client (this caused the "delete twice before it disappears" bug). Remove it
+    // locally now, and only fall back to a full reload if the server delete failed.
+    setClients((prev) => prev.filter((c) => c.id !== id));
+    const res = await fetch(`/api/clients/${id}`, { method: "DELETE", cache: "no-store" });
+    if (!res.ok) {
+      // Restore the true server state if the delete didn't go through.
+      await loadData();
+    }
   };
 
   const openEdit = (client: Client, e: React.MouseEvent) => {

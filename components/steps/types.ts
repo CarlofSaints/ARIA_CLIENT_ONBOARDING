@@ -79,7 +79,11 @@ export type Session = {
   id?: string;
   name?: string;
   surname?: string;
+  email?: string;
+  roleId?: string;
+  roleName?: string;
+  forcePasswordChange?: boolean;
+  // Legacy fields — never populated by the current login flow, kept for back-compat
   role?: string;
   permissions?: string[];
-  email?: string;
 } | null;

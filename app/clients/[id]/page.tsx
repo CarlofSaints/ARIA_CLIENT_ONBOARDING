@@ -92,9 +92,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [signOffModalOpen, setSignOffModalOpen] = useState(false);
   const [skipWarning, setSkipWarning] = useState<{ targetStep: number; incompleteSteps: string[] } | null>(null);
 
-  // Derive isAdmin from session permissions/role
+  // Derive isAdmin from the session's role. The login flow stores roleId/roleName
+  // (see lib/useAuth.ts + app/api/auth/route.ts) — NOT a `permissions` array or a
+  // `role` string, so the old check was always false for everyone.
   const typedSession = session as Session;
   const isAdmin = !!(
+    typedSession?.roleName?.toLowerCase().includes("admin") ||
+    typedSession?.roleId === "role-site-admin" ||
+    typedSession?.roleId === "role-developer" ||
+    // legacy fallbacks, in case an older session shape is ever present
     typedSession?.permissions?.includes("manage_clients") ||
     typedSession?.role?.toLowerCase().includes("admin")
   );
