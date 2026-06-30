@@ -10,6 +10,7 @@ import PersonnelEmailModal from "@/components/PersonnelEmailModal";
 import CognitoLinkModal from "@/components/CognitoLinkModal";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 import ControlFileSignOffModal from "@/components/ControlFileSignOffModal";
+import DocumentSendModal, { type DocKind } from "@/components/DocumentSendModal";
 import StepProgressBar, { STEP_LABELS } from "@/components/StepProgressBar";
 import Step1AccountSetup from "@/components/steps/Step1AccountSetup";
 import Step2ClientKickoff from "@/components/steps/Step2ClientKickoff";
@@ -90,6 +91,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [ndaSent, setNdaSent] = useState(false);
   const [ndaError, setNdaError] = useState("");
   const [signOffModalOpen, setSignOffModalOpen] = useState(false);
+  // SLA / EULA: populate-from-Cognito then email-with-edit flow
+  const [docGenerating, setDocGenerating] = useState<{ sla: boolean; eula: boolean }>({ sla: false, eula: false });
+  const [docError, setDocError] = useState<{ sla: string; eula: string }>({ sla: "", eula: "" });
+  const [docAttachment, setDocAttachment] = useState<{ sla?: { fileName: string; base64: string }; eula?: { fileName: string; base64: string } }>({});
+  const [docModalKind, setDocModalKind] = useState<DocKind | null>(null);
   const [skipWarning, setSkipWarning] = useState<{ targetStep: number; incompleteSteps: string[] } | null>(null);
 
   // Derive isAdmin from the session's role. The login flow stores roleId/roleName
@@ -344,6 +350,45 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  // Populate an SLA/EULA from Cognito → download for review + stash the
+  // attachment so the email step sends exactly what was reviewed.
+  const handlePopulateDoc = async (kind: DocKind) => {
+    setDocError((s) => ({ ...s, [kind]: "" }));
+    setDocGenerating((s) => ({ ...s, [kind]: true }));
+    try {
+      const res = await fetch(`/api/clients/${id}/document/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDocError((s) => ({ ...s, [kind]: data.error ?? `Failed to populate ${kind.toUpperCase()}` }));
+        return;
+      }
+      setDocAttachment((s) => ({ ...s, [kind]: { fileName: data.fileName, base64: data.base64 } }));
+      // Trigger a browser download so the admin can review the populated doc.
+      const link = document.createElement("a");
+      link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${data.base64}`;
+      link.download = data.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      setDocError((s) => ({ ...s, [kind]: "Network error while populating document" }));
+    } finally {
+      setDocGenerating((s) => ({ ...s, [kind]: false }));
+    }
+  };
+
+  const handleEmailDoc = (kind: DocKind) => {
+    if (!docAttachment[kind]) {
+      setDocError((s) => ({ ...s, [kind]: `Populate the ${kind.toUpperCase()} first` }));
+      return;
+    }
+    setDocModalKind(kind);
+  };
+
   const handleSendMandate = async (channelId: string) => {
     setMandateSending((s) => ({ ...s, [channelId]: true }));
     try {
@@ -564,10 +609,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           ndaSending={ndaSending}
           ndaSent={ndaSent}
           ndaError={ndaError}
+          docGenerating={docGenerating}
+          docError={docError}
+          docReady={{ sla: !!docAttachment.sla, eula: !!docAttachment.eula }}
           onCognitoOpen={() => setCognitoModalOpen(true)}
           onCognitoUnlink={handleCognitoUnlink}
           onXeroPush={handleXeroPush}
           onSendNda={handleSendNda}
+          onPopulateDoc={handlePopulateDoc}
+          onEmailDoc={handleEmailDoc}
           onSignOffOpen={() => setSignOffModalOpen(true)}
         />
       )}
@@ -746,6 +796,28 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           clientEmails={client.emails ?? []}
           session={session}
           onClose={() => setSignOffModalOpen(false)}
+        />
+      )}
+
+      {docModalKind && docAttachment[docModalKind] && (
+        <DocumentSendModal
+          clientId={id}
+          kind={docModalKind}
+          label={docModalKind.toUpperCase()}
+          longLabel={docModalKind === "sla" ? "Service Level Agreement" : "End User Licence Agreement"}
+          clientName={client.name}
+          contactName={client.contactName}
+          camName={cam ? `${cam.name} ${cam.surname}` : "your Account Manager"}
+          camEmail={cam?.email ?? ""}
+          defaultRecipients={client.emails ?? []}
+          attachment={docAttachment[docModalKind]!}
+          userId={typedSession?.id}
+          userName={typedSession ? `${typedSession.name} ${typedSession.surname}` : undefined}
+          onClose={() => setDocModalKind(null)}
+          onSent={() => {
+            setDocModalKind(null);
+            loadClient();
+          }}
         />
       )}
 

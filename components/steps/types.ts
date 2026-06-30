@@ -51,6 +51,8 @@ export type Client = {
   xeroContactId?: string;
   xeroContactUrl?: string;
   ndaSentAt?: string;
+  slaSentAt?: string;
+  eulaSentAt?: string;
   signOffEmailSentAt?: string;
   archived?: boolean;
   archivedAt?: string;

@@ -263,6 +263,8 @@ export type Client = {
   xeroContactId?: string;
   xeroContactUrl?: string;
   ndaSentAt?: string;
+  slaSentAt?: string;
+  eulaSentAt?: string;
   signOffEmailSentAt?: string;
   archived?: boolean;
   archivedAt?: string;
@@ -302,40 +304,51 @@ export async function saveChecklistItems(items: ChecklistItemDef[]): Promise<voi
 export async function getPersonnelConfig(): Promise<PersonnelConfig> { return readData<PersonnelConfig>("personnelConfig.json"); }
 export async function savePersonnelConfig(c: PersonnelConfig): Promise<void> { return writeData("personnelConfig.json", c); }
 
-// --- NDA Template ---
-export type NdaTemplate = {
+// --- Document Templates (NDA / SLA / EULA) ---
+// All legal document templates share one shape and one storage pattern, keyed by
+// kind → `${kind}-template.json` blob. The NDA wrappers below preserve the
+// original `nda-template.json` key so an already-uploaded NDA still resolves.
+export type DocTemplateKind = "nda" | "sla" | "eula";
+
+export type DocTemplate = {
   fileName: string;
   base64: string; // raw base64, no data URL prefix
   uploadedAt: string;
 };
 
-export async function getNdaTemplate(): Promise<NdaTemplate | null> {
+function templateBlobName(kind: DocTemplateKind): string {
+  return `${kind}-template.json`;
+}
+
+export async function getTemplate(kind: DocTemplateKind): Promise<DocTemplate | null> {
+  const name = templateBlobName(kind);
   if (!useBlob) {
-    const filePath = path.join(dataDir, "nda-template.json");
+    const filePath = path.join(dataDir, name);
     if (!fs.existsSync(filePath)) return null;
-    return readJsonSync<NdaTemplate>("nda-template.json");
+    return readJsonSync<DocTemplate>(name);
   }
 
   try {
-    const key = blobKey("nda-template.json");
+    const key = blobKey(name);
     const listing = await list({ prefix: key, limit: 1 });
     const match = listing.blobs.find((b) => b.pathname === key);
     if (!match) return null;
     const res = await fetch(match.url);
     if (!res.ok) return null;
     const text = await res.text();
-    return JSON.parse(text) as NdaTemplate;
+    return JSON.parse(text) as DocTemplate;
   } catch {
     return null;
   }
 }
 
-export async function saveNdaTemplate(t: NdaTemplate): Promise<void> {
+export async function saveTemplate(kind: DocTemplateKind, t: DocTemplate): Promise<void> {
+  const name = templateBlobName(kind);
   if (!useBlob) {
-    writeJsonSync("nda-template.json", t);
+    writeJsonSync(name, t);
     return;
   }
-  await put(blobKey("nda-template.json"), JSON.stringify(t), {
+  await put(blobKey(name), JSON.stringify(t), {
     access: "public",
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -343,14 +356,15 @@ export async function saveNdaTemplate(t: NdaTemplate): Promise<void> {
   });
 }
 
-export async function deleteNdaTemplate(): Promise<void> {
+export async function deleteTemplate(kind: DocTemplateKind): Promise<void> {
+  const name = templateBlobName(kind);
   if (!useBlob) {
-    const filePath = path.join(dataDir, "nda-template.json");
+    const filePath = path.join(dataDir, name);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     return;
   }
   try {
-    const key = blobKey("nda-template.json");
+    const key = blobKey(name);
     const listing = await list({ prefix: key, limit: 1 });
     const match = listing.blobs.find((b) => b.pathname === key);
     if (match) await del(match.url);
@@ -358,6 +372,12 @@ export async function deleteNdaTemplate(): Promise<void> {
     // already gone
   }
 }
+
+// NDA wrappers — preserved so existing callers (NDA send route) are unchanged.
+export type NdaTemplate = DocTemplate;
+export const getNdaTemplate = (): Promise<DocTemplate | null> => getTemplate("nda");
+export const saveNdaTemplate = (t: DocTemplate): Promise<void> => saveTemplate("nda", t);
+export const deleteNdaTemplate = (): Promise<void> => deleteTemplate("nda");
 
 // --- Activity Log ---
 

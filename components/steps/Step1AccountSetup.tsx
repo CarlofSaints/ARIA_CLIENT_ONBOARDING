@@ -19,10 +19,15 @@ type Props = {
   ndaSending: boolean;
   ndaSent: boolean;
   ndaError: string;
+  docGenerating: { sla: boolean; eula: boolean };
+  docError: { sla: string; eula: string };
+  docReady: { sla: boolean; eula: boolean };
   onCognitoOpen: () => void;
   onCognitoUnlink: () => void;
   onXeroPush: () => void;
   onSendNda: () => void;
+  onPopulateDoc: (kind: "sla" | "eula") => void;
+  onEmailDoc: (kind: "sla" | "eula") => void;
   onSignOffOpen: () => void;
   onToggleItem: (id: string, val: boolean) => void;
   onToggleChannelItem: (id: string, channelId: string, val: boolean) => void;
@@ -42,10 +47,15 @@ export default function Step1AccountSetup({
   ndaSending,
   ndaSent,
   ndaError,
+  docGenerating,
+  docError,
+  docReady,
   onCognitoOpen,
   onCognitoUnlink,
   onXeroPush,
   onSendNda,
+  onPopulateDoc,
+  onEmailDoc,
   onSignOffOpen,
   onToggleItem,
   onToggleChannelItem,
@@ -234,6 +244,72 @@ export default function Step1AccountSetup({
               ) : (
                 <div className="text-sm text-oj-muted italic">NDA — pending admin action</div>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Agreements (SLA / EULA) */}
+      <div className="bg-oj-white border border-oj-border rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-3 bg-oj-bg border-b border-oj-border">
+          <span className="text-xs font-bold text-oj-muted uppercase tracking-wider">Agreements</span>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          {isAdmin ? (
+            client.cognitoData ? (
+              ([
+                { kind: "sla" as const, label: "SLA", long: "Service Level Agreement", sentAt: client.slaSentAt },
+                { kind: "eula" as const, label: "EULA", long: "End User Licence Agreement", sentAt: client.eulaSentAt },
+              ]).map((doc) => (
+                <div key={doc.kind} className="flex flex-col gap-2 pb-4 border-b border-oj-border last:border-0 last:pb-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-oj-dark">{doc.long} ({doc.label})</span>
+                    {doc.sentAt && (
+                      <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1 whitespace-nowrap">
+                        ✓ Emailed {new Date(doc.sentAt).toLocaleDateString("en-ZA")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => onPopulateDoc(doc.kind)}
+                      disabled={docGenerating[doc.kind]}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-bg border border-oj-border text-oj-dark text-sm font-semibold hover:border-oj-blue transition-colors disabled:opacity-60"
+                    >
+                      {docGenerating[doc.kind] ? (
+                        <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-oj-blue border-t-transparent rounded-full" /> Populating…</>
+                      ) : (
+                        <>📄 {docReady[doc.kind] ? `Re-populate ${doc.label}` : `Populate ${doc.label} from Cognito`}</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => onEmailDoc(doc.kind)}
+                      disabled={!docReady[doc.kind]}
+                      title={docReady[doc.kind] ? undefined : `Populate the ${doc.label} first`}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-oj-blue text-white text-sm font-semibold hover:bg-oj-blue-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      ✉ Email {doc.label}…
+                    </button>
+                    {docReady[doc.kind] && !docGenerating[doc.kind] && (
+                      <span className="text-xs text-oj-muted">Document populated — review the download, then email.</span>
+                    )}
+                  </div>
+                  {docError[doc.kind] && (
+                    <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 max-w-md">{docError[doc.kind]}</p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-oj-muted px-1">Link Cognito data first to populate the SLA &amp; EULA.</div>
+            )
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div className={client.slaSentAt ? "text-green-700" : "text-oj-muted italic"}>
+                {client.slaSentAt ? `✓ SLA emailed ${new Date(client.slaSentAt).toLocaleDateString("en-ZA")}` : "SLA — pending admin action"}
+              </div>
+              <div className={client.eulaSentAt ? "text-green-700" : "text-oj-muted italic"}>
+                {client.eulaSentAt ? `✓ EULA emailed ${new Date(client.eulaSentAt).toLocaleDateString("en-ZA")}` : "EULA — pending admin action"}
+              </div>
             </div>
           )}
         </div>

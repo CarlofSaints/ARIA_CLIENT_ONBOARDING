@@ -1027,3 +1027,91 @@ export async function sendCamNewClientEmail(params: CamNewClientParams): Promise
   });
   if (errCam) throw new Error(`Resend error: ${errCam.message}`);
 }
+
+// ---------------------------------------------------------------------------
+// Generic legal-document email (SLA / EULA) — fully editable recipients & body,
+// with the populated .docx attached. Used by the document send route.
+// ---------------------------------------------------------------------------
+
+type DocumentEmailParams = {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  replyTo?: string;
+  subject: string;
+  bodyText: string;
+  attachments: { filename: string; base64: string }[];
+};
+
+export async function sendDocumentEmail(params: DocumentEmailParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY not set");
+  if (params.to.length === 0) throw new Error("At least one TO recipient is required");
+  const resend = new Resend(apiKey);
+
+  const ariaLogoPath = path.join(process.cwd(), "public", "aria-logo.png");
+  const ariaLogoData = fs.readFileSync(ariaLogoPath);
+
+  const bodyHtml = params.bodyText
+    .split("\n")
+    .map((line) =>
+      line.trim() === ""
+        ? `<tr><td style="padding:6px 0;"></td></tr>`
+        : `<tr><td style="font-size:15px;line-height:1.7;color:#2D3748;">${line
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")}</td></tr>`,
+    )
+    .join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#F5F7F8;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F7F8;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:8px;overflow:hidden;border:1px solid #E2E8F0;">
+        <tr>
+          <td style="background:#3D6273;padding:20px 32px;text-align:center;">
+            <img src="cid:aria-logo-doc" alt="ARIA" style="height:24px;width:auto;display:block;margin:0 auto;" />
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 32px 24px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              ${bodyHtml}
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#F5F7F8;padding:16px 32px;text-align:center;border-top:1px solid #E2E8F0;">
+            <p style="margin:0;font-size:12px;color:#718096;">© ${new Date().getFullYear()} OuterJoin (Pty) Ltd</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const docAttachments = params.attachments.map((a) => ({
+    filename: a.filename,
+    content: Buffer.from(a.base64, "base64"),
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  }));
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: params.to,
+    ...(params.cc && params.cc.length > 0 ? { cc: params.cc } : {}),
+    ...(params.bcc && params.bcc.length > 0 ? { bcc: params.bcc } : {}),
+    ...(params.replyTo ? { replyTo: params.replyTo } : {}),
+    subject: params.subject,
+    html,
+    attachments: [
+      { filename: "aria-logo.png", content: ariaLogoData, contentType: "image/png", contentId: "aria-logo-doc" },
+      ...docAttachments,
+    ],
+  });
+  if (error) throw new Error(`Resend error: ${error.message}`);
+}
